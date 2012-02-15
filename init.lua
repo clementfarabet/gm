@@ -55,14 +55,15 @@ local sort = torch.sort
 --
 function gm.graph(...)
    -- usage
-   local _, adj, nStates, unaries, joints = dok.unpack(
+   local _, adj, nStates, unaries, joints, verbose = dok.unpack(
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
       {arg='adjacency', type='torch.Tensor', help='binary adjacency matrix (N x N)', req=true},
       {arg='nStates', type='number | torch.Tensor | table', help='number of states per node (N, or a single number)', default=1},
       {arg='unaries', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
-      {arg='joints', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'}
+      {arg='joints', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
+      {arg='verbose', type='boolean', help='verbose mode', default=false}
    )
 
    -- graph structure
@@ -124,6 +125,8 @@ function gm.graph(...)
       graph.nStates = Tensor{nStates}
    end
    graph.adjacency = adj
+   graph.verbose = verbose
+   graph.timer = torch.Timer()
 
    -- store unaries/joints if given
    graph.unaries = unaries
@@ -175,7 +178,13 @@ function gm.graph(...)
                {type='number', help='maximum nb of iterations (used by some methods)', default=1}))
          xlua.error('missing/incorrect method','decode')
       end
-      return gm.decoders[method](g,maxIter)
+      graph.timer:reset()
+      local state,nodeBel = gm.decoders[method](g,maxIter)
+      local t = graph.timer:time()
+      if g.verbose then
+         print('<gm.decoders.'..method..'> decoded graph in ' .. t.real .. 'sec')
+      end
+      return state,nodeBel
    end
 
    graph.getPotentialForConfig = function(g,config)
@@ -206,10 +215,17 @@ function gm.graph(...)
    local tostring = function(g)
       local str = 'gm.GraphicalModel\n'
       str = str .. ' + nb of nodes: ' .. g.nNodes .. '\n'
-      str = str .. ' + nb of edges: ' .. g.nEdges
+      str = str .. ' + nb of edges: ' .. g.nEdges .. '\n'
+      str = str .. ' + maximum nb of states per node: ' .. g.nStates:max()
       return str
    end
    setmetatable(graph, {__tostring=tostring})
+
+   -- verbose?
+   if graph.verbose then
+      print('<gm.graph> created new graphical model:')
+      print(tostring(graph))
+   end
 
    -- return result
    return graph
@@ -220,19 +236,14 @@ end
 --
 function gm.testme()
    -- define graph structure
-   local nNodes = 4
-   local nEdges = 3
-   local adjacency = zeros(nNodes,nNodes)
-   adjacency[1][2] = 1
-   adjacency[2][1] = 1
-   adjacency[2][3] = 1
-   adjacency[3][2] = 1
-   adjacency[3][4] = 1
-   adjacency[4][3] = 1
+   local nNodes = 10
+   local adjacency = ones(nNodes,nNodes) - eye(nNodes)
+   local nEdges = nNodes^2 - nNodes
 
    -- unary potentials
    local nStates = 2
-   local unaries = Tensor{{1,3}, {9,1}, {1,3}, {9,1}}
+   local unaries = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
+                          {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
 
    -- joint potentials
    local joints = Tensor(nEdges,nStates,nStates)
@@ -243,17 +254,20 @@ function gm.testme()
 
    -- create graph
    local g = gm.graph{adjacency=adjacency, nStates=nStates, 
-                      unaries=unaries, joints=joints}
+                      unaries=unaries, joints=joints, verbose=true}
 
    -- decode graph
    local exact = g:decode('exact')
-   local bp = g:decode('bp')
-
-   print('exact optimal config:')
-   print(exact)
    print()
-   print('optimal config with belief propagation')
+   print('<gm.testme> exact optimal config:')
+   print(exact)
+
+   local bp,nodeBel = g:decode('bp',10)
+   print()
+   print('<gm.testme> optimal config with belief propagation:')
    print(bp)
+   print('<gm.testme> distributions on nodes:')
+   print(nodeBel)
 
    -- done
    return g

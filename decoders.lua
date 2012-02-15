@@ -39,6 +39,11 @@ local eye = torch.eye
 local Tensor = torch.Tensor
 local sort = torch.sort
 
+-- messages
+local warning = function(msg)
+   print(sys.COLORS.red .. msg .. sys.COLORS.none)
+end
+
 ----------------------------------------------------------------------
 -- exact decoding: only adapted to super small graphs
 --
@@ -46,6 +51,11 @@ function gm.decoders.exact(graph)
    -- check args
    if not graph.unaries or not graph.joints then
       xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
+   end
+
+   -- verbose
+   if graph.verbose then
+      print('<gm.decoders.bp> decoding using exhaustive search')
    end
 
    -- local vars
@@ -103,6 +113,11 @@ function gm.decoders.bp(graph,maxIter)
       xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
    end
    maxIter = maxIter or 1
+
+   -- verbose
+   if graph.verbose then
+      print('<gm.decoders.bp> decoding using belief-propagation')
+   end
 
    -- local vars
    local nNodes = graph.nNodes
@@ -184,8 +199,12 @@ function gm.decoders.bp(graph,maxIter)
       end
       msg_old:copy(msg)
    end
-   if idx == maxIter and graph.verbose then
-      print('<decode> reached max iterations')
+   if graph.verbose then
+      if idx == maxIter then
+         warning('<gm.decoders.bp> reached max iterations ('..maxIter..') before convergence')
+      else
+         print('<gm.decoders.bp> decoded graph in '..idx..' iterations')
+      end
    end
 
    -- compute nodeBel
@@ -201,8 +220,7 @@ function gm.decoders.bp(graph,maxIter)
             prod:cmul(msg[e+nEdges]:narrow(1,1,nStates[n]))
          end
       end
-      nodeBel[n]:narrow(1,1,nStates[n]):copy(prod)
-      nodeBel:div(prod:sum())
+      nodeBel[n]:narrow(1,1,nStates[n]):copy(prod):div(prod:sum())
    end
 
    -- get argmax of nodeBel: that's the optimal config
@@ -211,5 +229,5 @@ function gm.decoders.bp(graph,maxIter)
 
    -- store and return optimal config
    graph.optimal = optimalconfig
-   return optimalconfig
+   return optimalconfig,nodeBel
 end
