@@ -23,14 +23,14 @@
 -- 
 ----------------------------------------------------------------------
 -- description:
---     gm.decoders - a list of classical decoders
+--     gm.decode - a list of functions to decode optimal states
 --
 -- history: 
 --     February 2012 - initial draft - Clement Farabet
 ----------------------------------------------------------------------
 
--- that table contains all the decoders
-gm.decoders = {}
+-- that table contains all the decode
+gm.decode = {}
 
 -- shortcuts
 local zeros = torch.zeros
@@ -47,7 +47,7 @@ end
 ----------------------------------------------------------------------
 -- exact decoding: only adapted to super small graphs
 --
-function gm.decoders.exact(graph)
+function gm.decode.exact(graph)
    -- check args
    if not graph.unaries or not graph.joints then
       xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
@@ -55,7 +55,7 @@ function gm.decoders.exact(graph)
 
    -- verbose
    if graph.verbose then
-      print('<gm.decoders.bp> decoding using exhaustive search')
+      print('<gm.decode.bp> decoding using exhaustive search')
    end
 
    -- local vars
@@ -104,10 +104,10 @@ function gm.decoders.exact(graph)
 end
 
 ----------------------------------------------------------------------
--- belief propagation: if the gieven graph is loopy, and maxIter is
+-- belief propagation: if the given graph is loopy, and maxIter is
 -- set > 1, then loopy belief propagation is done
 --
-function gm.decoders.bp(graph,maxIter)
+function gm.decode.bp(graph,maxIter)
    -- check args
    if not graph.unaries or not graph.joints then
       xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
@@ -116,7 +116,7 @@ function gm.decoders.bp(graph,maxIter)
 
    -- verbose
    if graph.verbose then
-      print('<gm.decoders.bp> decoding using belief-propagation')
+      print('<gm.decode.bp> decoding using belief-propagation')
    end
 
    -- local vars
@@ -201,9 +201,9 @@ function gm.decoders.bp(graph,maxIter)
    end
    if graph.verbose then
       if idx == maxIter then
-         warning('<gm.decoders.bp> reached max iterations ('..maxIter..') before convergence')
+         warning('<gm.decode.bp> reached max iterations ('..maxIter..') before convergence')
       else
-         print('<gm.decoders.bp> decoded graph in '..idx..' iterations')
+         print('<gm.decode.bp> decoded graph in '..idx..' iterations')
       end
    end
 

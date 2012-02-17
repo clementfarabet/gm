@@ -41,7 +41,8 @@ gm = {}
 require 'libgm'
 
 -- extra code
-torch.include('gm', 'decoders.lua')
+torch.include('gm', 'decode.lua')
+torch.include('gm', 'infer.lua')
 
 -- shortcuts
 local zeros = torch.zeros
@@ -166,9 +167,9 @@ function gm.graph(...)
    end
 
    graph.decode = function(g,method,maxIter)
-      if not method or not gm.decoders[method] then
+      if not method or not gm.decode[method] then
          local availmethods = {}
-         for k in pairs(gm.decoders) do
+         for k in pairs(gm.decode) do
             table.insert(availmethods,k)
          end
          availmethods = table.concat(availmethods, ' | ')
@@ -179,12 +180,34 @@ function gm.graph(...)
          xlua.error('missing/incorrect method','decode')
       end
       graph.timer:reset()
-      local state,nodeBel = gm.decoders[method](g,maxIter)
+      local state = gm.decode[method](g,maxIter)
       local t = graph.timer:time()
       if g.verbose then
-         print('<gm.decoders.'..method..'> decoded graph in ' .. t.real .. 'sec')
+         print('<gm.decode.'..method..'> decoded graph in ' .. t.real .. 'sec')
       end
-      return state,nodeBel
+      return state
+   end
+
+   graph.infer = function(g,method,maxIter)
+      if not method or not gm.infer[method] then
+         local availmethods = {}
+         for k in pairs(gm.infer) do
+            table.insert(availmethods,k)
+         end
+         availmethods = table.concat(availmethods, ' | ')
+         print(xlua.usage('infer',
+               'compute optimal state of graph', nil,
+               {type='string', help='inference method: ' .. availmethods, req=true},
+               {type='number', help='maximum nb of iterations (used by some methods)', default=1}))
+         xlua.error('missing/incorrect method','infer')
+      end
+      graph.timer:reset()
+      local nodeBel,edgeBel,logZ = gm.infer[method](g,maxIter)
+      local t = graph.timer:time()
+      if g.verbose then
+         print('<gm.infer.'..method..'> performed inference on graph in ' .. t.real .. 'sec')
+      end
+      return nodeBel,edgeBel,logZ
    end
 
    graph.getPotentialForConfig = function(g,config)
@@ -210,6 +233,31 @@ function gm.graph(...)
       end
       -- return potential
       return pot
+   end
+
+   graph.getLogPotentialForConfig = function(g,config)
+      if not config then
+         print(xlua.usage('getLogPotentialForConfig',
+               'get log potential for a given configuration', nil,
+               {type='torch.Tensor', help='configuration of all nodes in graph', req=true}))
+         xlua.error('missing config','getPotentialForConfig')
+      end
+      -- locals
+      local unaries = g.unaries
+      local joints = g.joints
+      local logpot = 1
+      -- nodes
+      for n = 1,g.nNodes do
+         logpot = logpot + math.log(unaries[n][config[n]])
+      end
+      -- edges
+      for e = 1,g.nEdges do
+         local n1 = edgeEnds[e][1]
+         local n2 = edgeEnds[e][2]
+         logpot = logpot + math.log(joints[e][config[n1]][config[n2]])
+      end
+      -- return potential
+      return logpot
    end
 
    local tostring = function(g)
@@ -256,18 +304,29 @@ function gm.testme()
    local g = gm.graph{adjacency=adjacency, nStates=nStates, 
                       unaries=unaries, joints=joints, verbose=true}
 
-   -- decode graph
+   -- exact inference
    local exact = g:decode('exact')
    print()
    print('<gm.testme> exact optimal config:')
    print(exact)
 
+   local nodeBel,edgeBel,logZ = g:infer('exact')
+   print('<gm.testme> node beliefs:')
+   print(nodeBel)
+   print('<gm.testme> log(Z):')
+   print(logZ)
+
+   -- bp inference
    local bp,nodeBel = g:decode('bp',10)
    print()
    print('<gm.testme> optimal config with belief propagation:')
    print(bp)
-   print('<gm.testme> distributions on nodes:')
+
+   local nodeBel,edgeBel,logZ = g:infer('bp',10)
+   print('<gm.testme> node beliefs:')
    print(nodeBel)
+   print('<gm.testme> log(Z):')
+   print(logZ)
 
    -- done
    return g
