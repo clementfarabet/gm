@@ -33,6 +33,7 @@
 
 require 'xlua'
 require 'torch'
+require 'optim'
 
 -- package
 gm = {}
@@ -43,6 +44,7 @@ require 'libgm'
 -- extra code
 torch.include('gm', 'decode.lua')
 torch.include('gm', 'infer.lua')
+torch.include('gm', 'energies.lua')
 
 -- shortcuts
 local zeros = torch.zeros
@@ -280,9 +282,9 @@ function gm.graph(...)
 end
 
 ----------------------------------------------------------------------
--- example
+-- examples/tests
 --
-function gm.testme()
+function gm.test_inference()
    -- define graph structure
    local nNodes = 10
    local adjacency = ones(nNodes,nNodes) - eye(nNodes)
@@ -319,7 +321,7 @@ function gm.testme()
    print(logZ)
 
    -- bp inference
-   local bp,nodeBel = g:decode('bp',10)
+   local bp = g:decode('bp',10)
    print()
    print('<gm.testme> optimal config with belief propagation:')
    print(bp)
@@ -336,3 +338,50 @@ function gm.testme()
    return g
 end
 
+function gm.test_crf()
+   -- training data
+   local y = torch.Tensor(1059,28):apply(function() return torch.bernoulli(0.5)+1 end)
+   local nInstances = y:size(1)
+   local nNodes = y:size(2)
+
+   -- define graph structure
+   local nStates = y:max()
+   local adj = zeros(nNodes,nNodes)
+   for i = 1,nNodes-1 do
+      adj[i][i+1] = 1
+   end
+   adj = adj + adj:t()
+   local graph = gm.graph{adjacency=adj, nStates=nStates, verbose=false}
+   local nEdges = graph.nEdges
+   local maxStates = nStates
+
+   -- bias features
+   local nFeatures = 1
+   local Xnode = ones(nInstances,nFeatures,nNodes)
+   local Xedge = ones(nInstances,nFeatures,nEdges)
+
+   -- map
+   local nodeMap = zeros(nNodes,maxStates,nFeatures)
+   nodeMap:select(2,1):fill(1)
+   local edgeMap = zeros(nEdges,maxStates,maxStates,nFeatures)
+   edgeMap:select(2,1):select(2,1):fill(2)
+   edgeMap:select(2,2):select(2,1):fill(3)
+   edgeMap:select(2,1):select(2,2):fill(4)
+
+   -- initialize weights
+   local nParams = math.max(nodeMap:max(), edgeMap:max())
+   local w = zeros(nParams)
+
+   -- function to minimize
+   local func = function(w)
+      return gm.energies.crf.nll(graph,w,Xnode,Xedge,y,nodeMap,edgeMap,'bp',10)
+   end
+
+   -- optimize
+   w = optim.lbfgs(func, w, {verbose=true, maxIter=1})
+
+   -- make potentials
+   gm.energies.crf.makePotentials(graph,w,Xnode[1],Xedge[1],nodeMap,edgeMap)
+   local optimal = graph:decode('bp',10)
+   print(optimal)
+end
