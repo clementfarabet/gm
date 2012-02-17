@@ -1,8 +1,12 @@
 # gm: a package to create and use graphical models
 
 This package provides standard functions to create (arbitrary) 
-graphical models, and decode their optimal (maximum potential)
-state.
+undirected graphical models, and decode/infer their optimal 
+(maximum potential) state.
+
+Note: this code is heavily based on 
+[UGM](http://www.di.ens.fr/~mschmidt/Software/UGM.html), 
+from Mark Schmidt.
 
 ## Install 
 

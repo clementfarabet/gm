@@ -49,8 +49,8 @@ end
 --
 function gm.decode.exact(graph)
    -- check args
-   if not graph.unaries or not graph.joints then
-      xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
+   if not graph.nodePot or not graph.edgePot then
+      xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','decode')
    end
 
    -- verbose
@@ -60,7 +60,7 @@ function gm.decode.exact(graph)
 
    -- local vars
    local nNodes = graph.nNodes
-   local maxStates = graph.unaries:size(2)
+   local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
    local nStates = graph.nStates
 
@@ -109,8 +109,8 @@ end
 --
 function gm.decode.bp(graph,maxIter)
    -- check args
-   if not graph.unaries or not graph.joints then
-      xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
+   if not graph.nodePot or not graph.edgePot then
+      xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','decode')
    end
    maxIter = maxIter or 1
 
@@ -121,14 +121,14 @@ function gm.decode.bp(graph,maxIter)
 
    -- local vars
    local nNodes = graph.nNodes
-   local maxStates = graph.unaries:size(2)
+   local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
    local nStates = graph.nStates
    local edgeEnds = graph.edgeEnds
    local V = graph.V
    local E = graph.E
-   local unaries = graph.unaries
-   local joints = graph.joints
+   local nodePot = graph.nodePot
+   local edgePot = graph.edgePot
 
    -- init
    local product = ones(nNodes,maxStates)
@@ -163,13 +163,13 @@ function gm.decode.bp(graph,maxIter)
             -- get joint potential
             local pot_ij
             if n == edgeEnds[e][2] then
-               pot_ij = joints[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
             else
-               pot_ij = joints[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
+               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
             end
 
             -- compute product of all incoming messages except j
-            local temp = unaries[n]:narrow(1,1,nStates[n]):clone()
+            local temp = nodePot[n]:narrow(1,1,nStates[n]):clone()
             for kk = 1,edges:size(1) do
                local e2 = edges[kk]
                if e2 ~= e then
@@ -210,7 +210,7 @@ function gm.decode.bp(graph,maxIter)
    -- compute nodeBel
    for n = 1,nNodes do
       local edges = graph:getEdgesOf(n)
-      product[n] = unaries[n]
+      product[n] = nodePot[n]
       local prod = product[n]:narrow(1,1,nStates[n])
       for i = 1,edges:size(1) do
          local e = edges[i]

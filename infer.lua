@@ -39,7 +39,7 @@ local eye = torch.eye
 local Tensor = torch.Tensor
 local sort = torch.sort
 local log = torch.log
-local eps = 1e-30
+local eps = 1e-15
 
 -- messages
 local warning = function(msg)
@@ -51,8 +51,8 @@ end
 --
 function gm.infer.exact(graph)
    -- check args
-   if not graph.unaries or not graph.joints then
-      xlua.error('missing unaries/joints, please call graph:setFactors(...)','infer')
+   if not graph.nodePot or not graph.edgePot then
+      xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','infer')
    end
 
    -- verbose
@@ -62,7 +62,7 @@ function gm.infer.exact(graph)
 
    -- local vars
    local nNodes = graph.nNodes
-   local maxStates = graph.unaries:size(2)
+   local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
    local nStates = graph.nStates
    local edgeEnds = graph.edgeEnds
@@ -125,8 +125,8 @@ end
 --
 function gm.infer.bp(graph,maxIter)
    -- check args
-   if not graph.unaries or not graph.joints then
-      xlua.error('missing unaries/joints, please call graph:setFactors(...)','decode')
+   if not graph.nodePot or not graph.edgePot then
+      xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','decode')
    end
    maxIter = maxIter or 1
 
@@ -137,14 +137,14 @@ function gm.infer.bp(graph,maxIter)
 
    -- local vars
    local nNodes = graph.nNodes
-   local maxStates = graph.unaries:size(2)
+   local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
    local nStates = graph.nStates
    local edgeEnds = graph.edgeEnds
    local V = graph.V
    local E = graph.E
-   local unaries = graph.unaries
-   local joints = graph.joints
+   local nodePot = graph.nodePot
+   local edgePot = graph.edgePot
 
    -- init
    local product = ones(nNodes,maxStates)
@@ -180,13 +180,13 @@ function gm.infer.bp(graph,maxIter)
             -- get joint potential
             local pot_ij
             if n == edgeEnds[e][2] then
-               pot_ij = joints[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
             else
-               pot_ij = joints[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
+               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
             end
 
             -- compute product of all incoming messages except j
-            local temp = unaries[n]:narrow(1,1,nStates[n]):clone()
+            local temp = nodePot[n]:narrow(1,1,nStates[n]):clone()
             for kk = 1,edges:size(1) do
                local e2 = edges[kk]
                if e2 ~= e then
@@ -227,7 +227,7 @@ function gm.infer.bp(graph,maxIter)
    -- compute marginal beliefs
    for n = 1,nNodes do
       local edges = graph:getEdgesOf(n)
-      product[n] = unaries[n]
+      product[n] = nodePot[n]
       local prod = product[n]:narrow(1,1,nStates[n])
       for i = 1,edges:size(1) do
          local e = edges[i]
@@ -246,8 +246,17 @@ function gm.infer.bp(graph,maxIter)
       local n2 = edgeEnds[e][2]
       local belN1 = nodeBel[n1]:narrow(1,1,nStates[n1]):clone():cdiv(msg[e+nEdges]:narrow(1,1,nStates[n1]))
       local belN2 = nodeBel[n2]:narrow(1,1,nStates[n2]):clone():cdiv(msg[e]:narrow(1,1,nStates[n2]))
-      -- ...
-      -- ...
+      local b1 = Tensor(nStates[n1],nStates[n2])
+      local b2 = Tensor(nStates[n1],nStates[n2])
+      for i = 1,nStates[n2] do
+         b1:select(2,i):copy(belN1)
+      end
+      for i = 1,nStates[n1] do
+         b2:select(1,i):copy(belN2)
+      end
+      local eb = edgeBel[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+      eb:copy(b1):cmul(b2):cmul(edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]))
+      eb:div(eb:sum())
    end
 
    -- compute negative free energy
@@ -261,11 +270,21 @@ function gm.infer.bp(graph,maxIter)
       local edges = graph:getEdgesOf(n)
       local nNbrs = edges:size(1)
       -- node entropy
-      ent1 = ent1 + (nNbrs-1)* nodeBel[n]:narrow(1,1,nStates[n]) --...
-      -- ....
+      local nb = nodeBel[n]:narrow(1,1,nStates[n])
+      ent1 = ent1 + (nNbrs-1) * log(nb):cmul(nb):sum()
+      -- node energy
+      local np = nodePot[n]:narrow(1,1,nStates[n])
+      eng1 = eng1 - log(np):cmul(nb):sum()
    end
    for e = 1,nEdges do
-      -- ....
+      local n1 = edgeEnds[e][1]
+      local n2 = edgeEnds[e][2]
+      --  pairwise entropy
+      local eb = edgeBel[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+      ent2 = ent2 - log(eb):cmul(eb):sum()
+      -- pairwise energy
+      local ep = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+      eng2 = eng2 - log(ep):cmul(eb):sum()
    end
    local F = (eng1+eng2) - (ent1+ent2)
    local logZ = -F

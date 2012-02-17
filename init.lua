@@ -56,14 +56,14 @@ local sort = torch.sort
 --
 function gm.graph(...)
    -- usage
-   local _, adj, nStates, unaries, joints, verbose = dok.unpack(
+   local _, adj, nStates, nodePot, edgePot, verbose = dok.unpack(
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
       {arg='adjacency', type='torch.Tensor', help='binary adjacency matrix (N x N)', req=true},
       {arg='nStates', type='number | torch.Tensor | table', help='number of states per node (N, or a single number)', default=1},
-      {arg='unaries', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
-      {arg='joints', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
+      {arg='nodePot', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
+      {arg='edgePot', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
       {arg='verbose', type='boolean', help='verbose mode', default=false}
    )
 
@@ -129,9 +129,9 @@ function gm.graph(...)
    graph.verbose = verbose
    graph.timer = torch.Timer()
 
-   -- store unaries/joints if given
-   graph.unaries = unaries
-   graph.joints = joints
+   -- store nodePot/edgePot if given
+   graph.nodePot = nodePot
+   graph.edgePot = edgePot
 
    -- some functions
    graph.getEdgesOf = function(g,node)
@@ -154,16 +154,16 @@ function gm.graph(...)
       return neighbors
    end
 
-   graph.setFactors = function(g,unaries,joints)
-      if not unaries or not joints then
-         print(xlua.usage('setFactors',
-               'set factors of an existing graph', nil,
+   graph.setPotentials = function(g,nodePot,edgePot)
+      if not nodePot or not edgePot then
+         print(xlua.usage('setPotentials',
+               'set potentials of an existing graph', nil,
                {type='torch.Tensor', help='unary potentials', req=true},
                {type='torch.Tensor', help='joint potentials', req=true}))
-         xlua.error('missing arguments','setFactors')
+         xlua.error('missing arguments','setPotentials')
       end
-      g.unaries = unaries
-      g.joints = joints
+      g.nodePot = nodePot
+      g.edgePot = edgePot
    end
 
    graph.decode = function(g,method,maxIter)
@@ -218,18 +218,18 @@ function gm.graph(...)
          xlua.error('missing config','getPotentialForConfig')
       end
       -- locals
-      local unaries = g.unaries
-      local joints = g.joints
+      local nodePot = g.nodePot
+      local edgePot = g.edgePot
       local pot = 1
       -- nodes
       for n = 1,g.nNodes do
-         pot = pot * unaries[n][config[n]]
+         pot = pot * nodePot[n][config[n]]
       end
       -- edges
       for e = 1,g.nEdges do
          local n1 = edgeEnds[e][1]
          local n2 = edgeEnds[e][2]
-         pot = pot * joints[e][config[n1]][config[n2]]
+         pot = pot * edgePot[e][config[n1]][config[n2]]
       end
       -- return potential
       return pot
@@ -243,18 +243,18 @@ function gm.graph(...)
          xlua.error('missing config','getPotentialForConfig')
       end
       -- locals
-      local unaries = g.unaries
-      local joints = g.joints
+      local nodePot = g.nodePot
+      local edgePot = g.edgePot
       local logpot = 1
       -- nodes
       for n = 1,g.nNodes do
-         logpot = logpot + math.log(unaries[n][config[n]])
+         logpot = logpot + math.log(nodePot[n][config[n]])
       end
       -- edges
       for e = 1,g.nEdges do
          local n1 = edgeEnds[e][1]
          local n2 = edgeEnds[e][2]
-         logpot = logpot + math.log(joints[e][config[n1]][config[n2]])
+         logpot = logpot + math.log(edgePot[e][config[n1]][config[n2]])
       end
       -- return potential
       return logpot
@@ -290,19 +290,19 @@ function gm.testme()
 
    -- unary potentials
    local nStates = 2
-   local unaries = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
+   local nodePot = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
                           {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
 
    -- joint potentials
-   local joints = Tensor(nEdges,nStates,nStates)
+   local edgePot = Tensor(nEdges,nStates,nStates)
    local basic = Tensor{{2,1}, {1,2}}
    for e = 1,nEdges do
-      joints[e] = basic
+      edgePot[e] = basic
    end
 
    -- create graph
    local g = gm.graph{adjacency=adjacency, nStates=nStates, 
-                      unaries=unaries, joints=joints, verbose=true}
+                      nodePot=nodePot, edgePot=edgePot, verbose=true}
 
    -- exact inference
    local exact = g:decode('exact')
@@ -313,6 +313,8 @@ function gm.testme()
    local nodeBel,edgeBel,logZ = g:infer('exact')
    print('<gm.testme> node beliefs:')
    print(nodeBel)
+   --print('<gm.testme> edge beliefs:')
+   --print(edgeBel)
    print('<gm.testme> log(Z):')
    print(logZ)
 
@@ -325,6 +327,8 @@ function gm.testme()
    local nodeBel,edgeBel,logZ = g:infer('bp',10)
    print('<gm.testme> node beliefs:')
    print(nodeBel)
+   --print('<gm.testme> edge beliefs:')
+   --print(edgeBel)
    print('<gm.testme> log(Z):')
    print(logZ)
 
