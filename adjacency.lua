@@ -54,6 +54,24 @@ function gm.adjacency.full(nNodes)
 end
 
 ----------------------------------------------------------------------
+-- Create from sparse table of adjacency. The table looks like:
+-- table = {[1] = {3,7,9}, [2] = {4,8,6}, ...}
+-- If the table only contains upper or lower diagonal elements,
+-- the flag 'notsymmetric' should be set
+--
+function gm.adjacency.fromtable(table, notsymmetric)
+   local adj = zeros(nNodes,nNodes)
+   for i,list in ipairs(table) do
+      for _,j in ipairs(list) do
+         adj[i][j] = 1
+      end
+   end
+   if notsymmetric then
+      adj:add(adj:t())
+   end
+end
+
+----------------------------------------------------------------------
 -- N-connexity 2D lattice (N = 4 or 8)
 --
 function gm.adjacency.lattice2d(nRows,nCols,connex)
