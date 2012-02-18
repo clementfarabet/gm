@@ -54,26 +54,25 @@ end
 -- Simple example, doing decoding and inference
 --
 function gm.examples.simple()
-   -- define graph structure
+   -- define graph
    nNodes = 10
-   adjacency = ones(nNodes,nNodes) - eye(nNodes)
-   nEdges = nNodes^2 - nNodes
+   nStates = 2
+   adjacency = gm.adjacency.full(nNodes)
+   g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, verbose=true}
 
    -- unary potentials
-   nStates = 2
-   nodePot = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
+   nodePot = tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
                     {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
 
    -- joint potentials
-   edgePot = Tensor(nEdges,nStates,nStates)
-   basic = Tensor{{2,1}, {1,2}}
-   for e = 1,nEdges do
+   edgePot = tensor(g.nEdges,nStates,nStates)
+   basic = tensor{{2,1}, {1,2}}
+   for e = 1,g.nEdges do
       edgePot[e] = basic
    end
 
-   -- create graph
-   g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, 
-                nodePot=nodePot, edgePot=edgePot, verbose=true}
+   -- set potentials
+   g:setPotentials(nodePot,edgePot)
 
    -- exact inference
    local exact = g:decode('exact')
@@ -132,20 +131,8 @@ function gm.examples.trainCRF()
                         X[3]:reshape(32,32),X[4]:reshape(32,32)}, 
                  zoom=4, padding=1, nrow=2, legend='training examples'}
 
-   -- define adjacency matrix (4-connexity graph)
-   local adj = zeros(nNodes,nNodes)
-   for i = 1,nRows do
-      for j = 1,nCols do
-         local n = (i-1)*nCols + j
-         if j < nCols then
-            adj[n][n+1] = 1
-         end
-         if i < nRows then
-            adj[n][n+nRows] = 1
-         end
-      end
-   end
-   adj:add(adj:t())
+   -- define adjacency matrix (4-connexity lattice)
+   local adj = gm.adjacency.lattice2d(nRows,nCols,4)
 
    -- create graph
    g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, type='crf', maxIter=10}
@@ -204,10 +191,7 @@ function gm.examples.trainCRF()
    local learningRate=1e-3
    for iter = 1,nInstances*3 do
       local i = floor(uniform(1,nInstances)+0.5)
-      local Xnodei = Xnode:narrow(1,i,1)
-      local Xedgei = Xedge:narrow(1,i,1)
-      local yi = y:narrow(1,i,1)
-      local f,grad = g:nll(Xnodei,Xedgei,yi,'bp')
+      local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
       g.w:add(-learningRate, grad)
       print('SGD @ iteration ' .. iter .. ': objective = ' .. f)
    end

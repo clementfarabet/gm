@@ -54,6 +54,13 @@ end
 -- Negative log-likelihood of a CRF
 --
 function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,maxIter)
+   -- check sizes
+   if Xnode:nDimension() == 2 then -- single example
+      Xnode = Xnode:reshape(1,Xnode:size(1),Xnode:size(2))
+      Xedge = Xedge:reshape(1,Xedge:size(1),Xedge:size(2))
+      Y = Y:reshape(1,Y:size(1))
+   end
+
    -- locals
    local nInstances = Y:size(1)
    local nNodes = graph.nNodes

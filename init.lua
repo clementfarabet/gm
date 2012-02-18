@@ -45,6 +45,7 @@ torch.include('gm', 'decode.lua')
 torch.include('gm', 'infer.lua')
 torch.include('gm', 'energies.lua')
 torch.include('gm', 'examples.lua')
+torch.include('gm', 'adjacency.lua')
 
 -- shortcuts
 local zeros = torch.zeros
@@ -134,6 +135,15 @@ function gm.graph(...)
    graph.verbose = verbose
    graph.type = tp
    graph.timer = torch.Timer()
+
+   -- type?
+   if graph.type == 'crf' or graph.type == 'generic' then
+      -- all good
+   elseif graph.type == 'mrf' then
+      xlua.error('mrf not supported yet', 'gm.graph')
+   else
+      xlua.error('unknown graph type: ' .. graph.type, 'gm.graph')
+   end
 
    -- store nodePot/edgePot if given
    graph.nodePot = nodePot
