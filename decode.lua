@@ -112,7 +112,7 @@ function gm.decode.bp(graph,maxIter)
    if not graph.nodePot or not graph.edgePot then
       xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','decode')
    end
-   maxIter = maxIter or 1
+   maxIter = maxIter or graph.maxIter or 1
 
    -- verbose
    if graph.verbose then
