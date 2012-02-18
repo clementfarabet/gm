@@ -148,7 +148,7 @@ function gm.examples.trainCRF()
    adj:add(adj:t())
 
    -- create graph
-   g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, maxIter=10}
+   g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, type='crf', maxIter=10}
 
    -- create node features (normalized X and a bias)
    Xnode = tensor(nInstances,2,nNodes)
@@ -197,28 +197,31 @@ function gm.examples.trainCRF()
       edgeMap:select(4,ef):select(3,2):select(2,2):fill(f+ef)
    end
 
-   -- now allocate parameters
-   local nParams = math.max(nodeMap:max(),edgeMap:max())
-   w = zeros(nParams)
+   -- initialize parameters
+   g:initParameters(nodeMap,edgeMap)
 
    -- and train, for 3 epochs over the training data
-   local learningRate=1e-4
+   local learningRate=1e-3
    for iter = 1,nInstances*3 do
       local i = floor(uniform(1,nInstances)+0.5)
-      local f,g = gm.energies.crf.nll(g,w,
-                                      Xnode:narrow(1,i,1),Xedge:narrow(1,i,1),
-                                      y:narrow(1,i,1),
-                                      nodeMap,edgeMap,'bp')
-      w:add(-learningRate, g)
+      local Xnodei = Xnode:narrow(1,i,1)
+      local Xedgei = Xedge:narrow(1,i,1)
+      local yi = y:narrow(1,i,1)
+      local f,grad = g:nll(Xnodei,Xedgei,yi,'bp')
+      g.w:add(-learningRate, grad)
       print('SGD @ iteration ' .. iter .. ': objective = ' .. f)
    end
 
    -- the model is trained, generate node/edge potentials, and test
-   results = {}
+   marginals = {}
+   labelings = {}
    for i = 1,4 do
-      gm.energies.crf.makePotentials(g,w,Xnode[i],Xedge[i],nodeMap,edgeMap)
+      g:makePotentials(Xnode[i],Xedge[i])
       nodeBel = g:infer('bp')
-      table.insert(results,nodeBel:select(2,2):reshape(nRows,nCols))
+      labeling = g:decode('bp')
+      table.insert(marginals,nodeBel:select(2,2):reshape(nRows,nCols))
+      table.insert(labelings,labeling:reshape(nRows,nCols))
    end
-   image.display{image=results, zoom=4, padding=1, nrow=2, legend='predictions'}
+   image.display{image=marginals, zoom=4, padding=1, nrow=2, legend='marginals'}
+   image.display{image=labelings, zoom=4, padding=1, nrow=2, legend='labeling'}
 end

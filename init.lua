@@ -58,7 +58,7 @@ local sort = torch.sort
 --
 function gm.graph(...)
    -- usage
-   local _, adj, nStates, nodePot, edgePot, maxIter, verbose = dok.unpack(
+   local _, adj, nStates, nodePot, edgePot, tp, maxIter, verbose = dok.unpack(
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
@@ -66,6 +66,7 @@ function gm.graph(...)
       {arg='nStates', type='number | torch.Tensor | table', help='number of states per node (N, or a single number)', default=1},
       {arg='nodePot', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
       {arg='edgePot', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
+      {arg='type', type='string', help='type of graph: crf | mrf | generic', default='generic'},
       {arg='maxIter', type='number', help='maximum nb of iterations for loopy graphs', default=1},
       {arg='verbose', type='boolean', help='verbose mode', default=false}
    )
@@ -131,6 +132,7 @@ function gm.graph(...)
    graph.adjacency = adj
    graph.maxIter = maxIter
    graph.verbose = verbose
+   graph.type = tp
    graph.timer = torch.Timer()
 
    -- store nodePot/edgePot if given
@@ -212,6 +214,64 @@ function gm.graph(...)
          print('<gm.infer.'..method..'> performed inference on graph in ' .. t.real .. 'sec')
       end
       return nodeBel,edgeBel,logZ
+   end
+
+   graph.initParameters = function(g,nodeMap,edgeMap)
+      if not nodeMap or not edgeMap then
+         print(xlua.usage('initParameters',
+               'init trainable parameters (for crf/mrf graphs)', nil,
+               {type='torch.Tensor', help='map from node potentials to parameters', req=true},
+               {type='torch.Tensor', help='map from edge potentials to parameters', req=true}))
+         xlua.error('missing arguments','initParameters')
+      end
+      g.nodeMap = nodeMap
+      g.edgeMap = edgeMap
+      g.nParams = math.max(nodeMap:max(),edgeMap:max())
+      g.w = zeros(g.nParams)
+   end
+
+   graph.makePotentials = function(g,Xnode,Xedge)
+      if not g.w then
+         xlua.error('graph doesnt have parameters, call g:initParameters() first','nll')
+      end
+      if not Xnode or not Xedge or not gm.energies[g.type] then
+         print(xlua.usage('makePotentials',
+               'make potentials from internal parameters (for crf/mrf graphs) and given node/edge features', nil,
+               {type='torch.Tensor', help='node features', req=true},
+               {type='torch.Tensor', help='edge features', req=true}))
+         xlua.error('missing arguments / incorrect graph','makePotentials')
+      end
+      gm.energies.crf.makePotentials(g,g.w,Xnode,Xedge,g.nodeMap,g.edgeMap)
+   end
+
+   graph.nll = function(g,Xnode,Xedge,y,method,maxIter)
+      if not g.w then
+         xlua.error('graph doesnt have parameters, call g:initParameters() first','nll')
+      end
+      if not Xnode or not Xedge or not y or not method or not gm.infer[method] or not gm.energies[g.type] then
+         local availmethods = {}
+         for k in pairs(gm.infer) do
+            table.insert(availmethods,k)
+         end
+         availmethods = table.concat(availmethods, ' | ')
+         print(xlua.usage('nll',
+               'compute negative log-likelihood of CRF/MRF, and its gradient wrt weights', nil,
+               {type='torch.Tensor', help='node features', req=true},
+               {type='torch.Tensor', help='edge features', req=true},
+               {type='torch.Tensor', help='labeling', req=true},
+               {type='string', help='inference method: ' .. availmethods, req=true},
+               {type='number', help='maximum nb of iterations (used by some methods)', default='graph.maxIter'}))
+         xlua.error('missing/incorrect arguments / incorrect graph','nll')
+      end
+      graph.timer:reset()
+      local f,g = gm.energies[g.type].nll(g, g.w, Xnode, Xedge, y,
+                                          g.nodeMap,g.edgeMap, method,
+                                          maxIter or g.maxIter)
+      local t = graph.timer:time()
+      if g.verbose then
+         print('<gm.nll.'..method..'> computed negative log-likelihood in ' .. t.real .. 'sec')
+      end
+      return f,g
    end
 
    graph.getPotentialForConfig = function(g,config)
