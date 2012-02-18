@@ -148,7 +148,7 @@ function gm.examples.trainCRF()
    adj:add(adj:t())
 
    -- create graph
-   g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, maxIter=5}
+   g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, maxIter=10}
 
    -- create node features (normalized X and a bias)
    Xnode = tensor(nInstances,2,nNodes)
@@ -199,7 +199,7 @@ function gm.examples.trainCRF()
 
    -- now allocate parameters
    local nParams = math.max(nodeMap:max(),edgeMap:max())
-   w = randn(nParams)
+   w = zeros(nParams)
 
    -- and train, for 3 epochs over the training data
    local learningRate=1e-4
