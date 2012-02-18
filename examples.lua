@@ -33,13 +33,17 @@
 gm.examples = {}
 
 -- shortcuts
+local tensor = torch.Tensor
 local zeros = torch.zeros
 local ones = torch.ones
+local randn = torch.randn
 local eye = torch.eye
-local Tensor = torch.Tensor
 local sort = torch.sort
 local log = torch.log
 local exp = torch.exp
+local floor = torch.floor
+local ceil = math.ceil
+local uniform = torch.uniform
 
 -- messages
 local warning = function(msg)
@@ -51,25 +55,25 @@ end
 --
 function gm.examples.simple()
    -- define graph structure
-   local nNodes = 10
-   local adjacency = ones(nNodes,nNodes) - eye(nNodes)
-   local nEdges = nNodes^2 - nNodes
+   nNodes = 10
+   adjacency = ones(nNodes,nNodes) - eye(nNodes)
+   nEdges = nNodes^2 - nNodes
 
    -- unary potentials
-   local nStates = 2
-   local nodePot = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
-                          {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
+   nStates = 2
+   nodePot = Tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
+                    {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
 
    -- joint potentials
-   local edgePot = Tensor(nEdges,nStates,nStates)
-   local basic = Tensor{{2,1}, {1,2}}
+   edgePot = Tensor(nEdges,nStates,nStates)
+   basic = Tensor{{2,1}, {1,2}}
    for e = 1,nEdges do
       edgePot[e] = basic
    end
 
    -- create graph
-   local g = gm.graph{adjacency=adjacency, nStates=nStates, 
-                      nodePot=nodePot, edgePot=edgePot, verbose=true}
+   g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, 
+                nodePot=nodePot, edgePot=edgePot, verbose=true}
 
    -- exact inference
    local exact = g:decode('exact')
@@ -86,70 +90,135 @@ function gm.examples.simple()
    print(logZ)
 
    -- bp inference
-   local bp = g:decode('bp',10)
+   local bp = g:decode('bp')
    print()
    print('<gm.testme> optimal config with belief propagation:')
    print(bp)
 
-   local nodeBel,edgeBel,logZ = g:infer('bp',10)
+   local nodeBel,edgeBel,logZ = g:infer('bp')
    print('<gm.testme> node beliefs:')
    print(nodeBel)
    --print('<gm.testme> edge beliefs:')
    --print(edgeBel)
    print('<gm.testme> log(Z):')
    print(logZ)
-
-   -- done
-   return g
 end
 
 ----------------------------------------------------------------------
--- Example of how to train a CRF
+-- Example of how to train a CRF for a simple segmentation task
 --
 function gm.examples.trainCRF()
-   -- training data
-   local y = torch.Tensor(1059,28):apply(function() return torch.bernoulli(0.5)+1 end)
-   local nInstances = y:size(1)
-   local nNodes = y:size(2)
+   -- make training data
+   sample = torch.load(paths.concat(paths.install_lua_path, 'gm', 'X.t7'))
+   nRows,nCols = sample:size(1),sample:size(2)
+   nNodes = nRows*nCols
+   nStates = 2
+   nInstances = 100
+   -- make labels (MAP):
+   y = tensor(nInstances,nRows*nCols)
+   for i = 1,nInstances do
+      y[i] = sample
+   end
+   y = y + 1
+   -- make noisy training data:
+   X = tensor(nInstances,1,nRows*nCols)
+   for i = 1,nInstances do
+      X[i] = sample
+   end
+   X = X + randn(X:size())/2
+   -- display a couple of input examples
+   require 'image'
+   image.display{image={X[1]:reshape(32,32),X[2]:reshape(32,32),
+                        X[3]:reshape(32,32),X[4]:reshape(32,32)}, 
+                 zoom=4, padding=1, nrow=2, legend='training examples'}
 
-   -- define graph structure
-   local nStates = y:max()
+   -- define adjacency matrix (4-connexity graph)
    local adj = zeros(nNodes,nNodes)
-   for i = 1,nNodes-1 do
-      adj[i][i+1] = 1
+   for i = 1,nRows do
+      for j = 1,nCols do
+         local n = (i-1)*nCols + j
+         if j < nCols then
+            adj[n][n+1] = 1
+         end
+         if i < nRows then
+            adj[n][n+nRows] = 1
+         end
+      end
    end
-   adj = adj + adj:t()
-   local graph = gm.graph{adjacency=adj, nStates=nStates, verbose=false}
-   local nEdges = graph.nEdges
-   local maxStates = nStates
+   adj:add(adj:t())
 
-   -- bias features
-   local nFeatures = 1
-   local Xnode = ones(nInstances,nFeatures,nNodes)
-   local Xedge = ones(nInstances,nFeatures,nEdges)
+   -- create graph
+   g = gm.graph{adjacency=adj, nStates=nStates, verbose=true, maxIter=5}
 
-   -- map
-   local nodeMap = zeros(nNodes,maxStates,nFeatures)
-   nodeMap:select(2,1):fill(1)
-   local edgeMap = zeros(nEdges,maxStates,maxStates,nFeatures)
-   edgeMap:select(2,1):select(2,1):fill(2)
-   edgeMap:select(2,2):select(2,1):fill(3)
-   edgeMap:select(2,1):select(2,2):fill(4)
+   -- create node features (normalized X and a bias)
+   Xnode = tensor(nInstances,2,nNodes)
+   Xnode:select(2,1):fill(1) -- bias
+   -- normalize features:
+   nFeatures = X:size(2)
+   for f = 1,nFeatures do
+      local Xf = X:select(2,f)
+      local mu = Xf:mean()
+      local sigma = Xf:std()
+      Xf:add(-mu):div(sigma)
+   end
+   Xnode:select(2,2):copy(X) -- features (simple normalized grayscale)
+   nNodeFeatures = Xnode:size(2)
 
-   -- initialize weights
-   local nParams = math.max(nodeMap:max(), edgeMap:max())
-   local w = zeros(nParams)
-
-   -- function to minimize
-   local func = function(w)
-      return gm.energies.crf.nll(graph,w,Xnode,Xedge,y,nodeMap,edgeMap,'bp',10)
+   -- tie node potentials to parameter vector
+   nodeMap = zeros(nNodes,nStates,nNodeFeatures)
+   for f = 1,nNodeFeatures do
+      nodeMap:select(3,f):select(2,1):fill(f)
    end
 
-   -- optimize
-   w = optim.lbfgs(func, w, {verbose=true, maxIter=1})
+   -- create edge features
+   nEdges = g.edgeEnds:size(1)
+   nEdgeFeatures = nNodeFeatures*2-1 -- sharing bias, but not grayscale features
+   Xedge = zeros(nInstances,nEdgeFeatures,nEdges)
+   for i = 1,nInstances do
+      for e =1,nEdges do
+         local n1 = g.edgeEnds[e][1]
+         local n2 = g.edgeEnds[e][2]
+         for f = 1,nNodeFeatures do
+            -- get all features from node1
+            Xedge[i][f][e] = Xnode[i][f][n1]
+         end
+         for f = 1,nNodeFeatures-1 do
+            -- get all features from node1, except bias (shared)
+            Xedge[i][nNodeFeatures+f][e] = Xnode[i][f+1][n2]
+         end
+      end
+   end
 
-   -- make potentials
-   gm.energies.crf.makePotentials(graph,w,Xnode[1],Xedge[1],nodeMap,edgeMap)
-   local optimal = graph:decode('bp',10)
-   print(optimal)
+   -- tie edge potentials to parameter vector
+   local f = nodeMap:max()
+   edgeMap = zeros(nEdges,nStates,nStates,nEdgeFeatures)
+   for ef = 1,nEdgeFeatures do
+      edgeMap:select(4,ef):select(3,1):select(2,1):fill(f+ef)
+      edgeMap:select(4,ef):select(3,2):select(2,2):fill(f+ef)
+   end
+
+   -- now allocate parameters
+   local nParams = math.max(nodeMap:max(),edgeMap:max())
+   w = randn(nParams)
+
+   -- and train, for 3 epochs over the training data
+   local learningRate=1e-4
+   for iter = 1,nInstances*3 do
+      local i = floor(uniform(1,nInstances)+0.5)
+      local f,g = gm.energies.crf.nll(g,w,
+                                      Xnode:narrow(1,i,1),Xedge:narrow(1,i,1),
+                                      y:narrow(1,i,1),
+                                      nodeMap,edgeMap,'bp')
+      w:add(-learningRate, g)
+      print('SGD @ iteration ' .. iter .. ': objective = ' .. f)
+   end
+
+   -- the model is trained, generate node/edge potentials, and test
+   results = {}
+   for i = 1,4 do
+      gm.energies.crf.makePotentials(g,w,Xnode[i],Xedge[i],nodeMap,edgeMap)
+      nodeBel = g:infer('bp')
+      table.insert(results,nodeBel:select(2,2):reshape(nRows,nCols))
+   end
+   image.display{image=results, zoom=4, padding=1, nrow=2, legend='predictions'}
 end

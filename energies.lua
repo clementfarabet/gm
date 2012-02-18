@@ -54,17 +54,8 @@ end
 -- Negative log-likelihood of a CRF
 --
 function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,maxIter)
-   -- init
-   local nInstances
-   if type(Y) == 'table' then
-      nInstances = #Y
-   else
-      nInstances = Y:size(1)
-   end
-   local nll = 0
-   local grad = zeros(w:size())
-
    -- locals
+   local nInstances = Y:size(1)
    local nNodes = graph.nNodes
    local maxStates = nodeMap:size(2)
    local nNodeFeatures = Xnode:size(2)
@@ -72,6 +63,10 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
    local nEdges = graph.nEdges
    local nStates = graph.nStates
    local edgeEnds = graph.edgeEnds
+
+   -- init
+   local nll = 0
+   local grad = zeros(w:size())
 
    -- compute E=nll and dE/dw
    for i = 1,nInstances do

@@ -33,7 +33,6 @@
 
 require 'xlua'
 require 'torch'
-require 'optim'
 
 -- package
 gm = {}
@@ -59,7 +58,7 @@ local sort = torch.sort
 --
 function gm.graph(...)
    -- usage
-   local _, adj, nStates, nodePot, edgePot, verbose = dok.unpack(
+   local _, adj, nStates, nodePot, edgePot, maxIter, verbose = dok.unpack(
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
@@ -67,6 +66,7 @@ function gm.graph(...)
       {arg='nStates', type='number | torch.Tensor | table', help='number of states per node (N, or a single number)', default=1},
       {arg='nodePot', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
       {arg='edgePot', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
+      {arg='maxIter', type='number', help='maximum nb of iterations for loopy graphs', default=1},
       {arg='verbose', type='boolean', help='verbose mode', default=false}
    )
 
@@ -129,6 +129,7 @@ function gm.graph(...)
       graph.nStates = Tensor{nStates}
    end
    graph.adjacency = adj
+   graph.maxIter = maxIter
    graph.verbose = verbose
    graph.timer = torch.Timer()
 
@@ -179,11 +180,11 @@ function gm.graph(...)
          print(xlua.usage('decode',
                'compute optimal state of graph', nil,
                {type='string', help='decoding method: ' .. availmethods, req=true},
-               {type='number', help='maximum nb of iterations (used by some methods)', default=1}))
+               {type='number', help='maximum nb of iterations (used by some methods)', default='graph.maxIter'}))
          xlua.error('missing/incorrect method','decode')
       end
       graph.timer:reset()
-      local state = gm.decode[method](g,maxIter)
+      local state = gm.decode[method](g, maxIter or g.maxIter)
       local t = graph.timer:time()
       if g.verbose then
          print('<gm.decode.'..method..'> decoded graph in ' .. t.real .. 'sec')
@@ -201,11 +202,11 @@ function gm.graph(...)
          print(xlua.usage('infer',
                'compute optimal state of graph', nil,
                {type='string', help='inference method: ' .. availmethods, req=true},
-               {type='number', help='maximum nb of iterations (used by some methods)', default=1}))
+               {type='number', help='maximum nb of iterations (used by some methods)', default='graph.maxIter'}))
          xlua.error('missing/incorrect method','infer')
       end
       graph.timer:reset()
-      local nodeBel,edgeBel,logZ = gm.infer[method](g,maxIter)
+      local nodeBel,edgeBel,logZ = gm.infer[method](g, maxIter or g.maxIter)
       local t = graph.timer:time()
       if g.verbose then
          print('<gm.infer.'..method..'> performed inference on graph in ' .. t.real .. 'sec')
