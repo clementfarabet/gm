@@ -115,7 +115,15 @@ function gm.graph(...)
 
    -- count incident edges for each variable
    local nNei = zeros(nNodes)
-   local nei = zeros(nNodes,nNodes)
+   --local nei
+   if type(adj) == 'table' then
+      nei = {}
+      for n = 1,nNodes do
+         nei[n] = {}
+      end
+   else
+      nei = zeros(nNodes,nNodes)
+   end
    for e = 1,nEdges do
       local n1 = edgeEnds[e][1]
       local n2 = edgeEnds[e][2]
@@ -133,9 +141,18 @@ function gm.graph(...)
    local edge = 1
    for n = 1,nNodes do
       V[n] = edge
-      local nodeEdges = sort(nei[n]:narrow(1,1,nNei[n]))
-      E:narrow(1,edge,nodeEdges:size(1)):copy(nodeEdges)
-      edge = edge + nodeEdges:size(1)
+      if type(nei) == 'table' then
+         table.sort(nei[n])
+         local nodeEdges = nei[n]
+         for i = 1,#nodeEdges do
+            E[edge+i-1] = nodeEdges[i]
+         end
+         edge = edge + #nodeEdges
+      else
+         local nodeEdges = sort(nei[n]:narrow(1,1,nNei[n]))
+         E:narrow(1,edge,nodeEdges:size(1)):copy(nodeEdges)
+         edge = edge + nodeEdges:size(1)
+      end
    end
    V[nNodes+1] = edge
 
