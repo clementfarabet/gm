@@ -71,8 +71,8 @@ function gm.adjacency.lattice2d(nRows,nCols,connex)
                adj[n+1][n] = 1
             end
             if i < nRows then
-               adj[n][n+nRows] = 1
-               adj[n+nRows][n] = 1
+               adj[n][n+nCols] = 1
+               adj[n+nCols][n] = 1
             end
          end
       end
@@ -85,16 +85,16 @@ function gm.adjacency.lattice2d(nRows,nCols,connex)
                adj[n+1][n] = 1
             end
             if i < nRows then
-               adj[n][n+nRows] = 1
-               adj[n+nRows][n] = 1
+               adj[n][n+nCols] = 1
+               adj[n+nCols][n] = 1
             end
             if i < nRows and j < nCols then
-               adj[n][n+nRows+1] = 1
-               adj[n+nRows+1][n] = 1
+               adj[n][n+nCols+1] = 1
+               adj[n+nCols+1][n] = 1
             end
             if i < nRows and j > 1 then
-               adj[n][n+nRows-1] = 1
-               adj[n+nRows-1][n] = 1
+               adj[n][n+nCols-1] = 1
+               adj[n+nCols-1][n] = 1
             end
          end
       end
