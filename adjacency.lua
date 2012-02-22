@@ -54,38 +54,25 @@ function gm.adjacency.full(nNodes)
 end
 
 ----------------------------------------------------------------------
--- Create from sparse table of adjacency. The table looks like:
--- table = {[1] = {3,7,9}, [2] = {4,8,6}, ...}
--- If the table only contains upper or lower diagonal elements,
--- the flag 'notsymmetric' should be set
---
-function gm.adjacency.fromtable(table, notsymmetric)
-   local adj = zeros(nNodes,nNodes)
-   for i,list in ipairs(table) do
-      for _,j in ipairs(list) do
-         adj[i][j] = 1
-      end
-   end
-   if notsymmetric then
-      adj:add(adj:t())
-   end
-end
-
-----------------------------------------------------------------------
 -- N-connexity 2D lattice (N = 4 or 8)
 --
 function gm.adjacency.lattice2d(nRows,nCols,connex)
    local nNodes = nRows*nCols
-   local adj = zeros(nNodes,nNodes)
+   local adj = {}
+   for n = 1,nNodes do
+      adj[n] = {}
+   end
    if connex == 4 then
       for i = 1,nRows do
          for j = 1,nCols do
             local n = (i-1)*nCols + j
             if j < nCols then
                adj[n][n+1] = 1
+               adj[n+1][n] = 1
             end
             if i < nRows then
                adj[n][n+nRows] = 1
+               adj[n+nRows][n] = 1
             end
          end
       end
@@ -95,22 +82,25 @@ function gm.adjacency.lattice2d(nRows,nCols,connex)
             local n = (i-1)*nCols + j
             if j < nCols then
                adj[n][n+1] = 1
+               adj[n+1][n] = 1
             end
             if i < nRows then
                adj[n][n+nRows] = 1
+               adj[n+nRows][n] = 1
             end
             if i < nRows and j < nCols then
                adj[n][n+nRows+1] = 1
+               adj[n+nRows+1][n] = 1
             end
             if i < nRows and j > 1 then
                adj[n][n+nRows-1] = 1
+               adj[n+nRows-1][n] = 1
             end
          end
       end
    else
       sys.error('connexity can only be 4 or 8 on a 2D lattice', 'gm.adjacency.lattice2d')
    end
-   adj:add(adj:t())
    return adj
 end
 

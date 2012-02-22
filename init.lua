@@ -63,7 +63,7 @@ function gm.graph(...)
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
-      {arg='adjacency', type='torch.Tensor', help='binary adjacency matrix (N x N)', req=true},
+      {arg='adjacency', type='torch.Tensor | table', help='binary adjacency matrix (N x N tensor, or N-entry sparse table)', req=true},
       {arg='nStates', type='number | torch.Tensor | table', help='number of states per node (N, or a single number)', default=1},
       {arg='nodePot', type='torch.Tensor', help='unary/node potentials (N x nStates)'},
       {arg='edgePot', type='torch.Tensor', help='joint/edge potentials (N x nStates x nStates)'},
@@ -75,17 +75,40 @@ function gm.graph(...)
    -- graph structure
    local graph = {}
 
-   -- construct list of edges
-   local nNodes = adj:size(1)
-   local nEdges = adj:sum()/2
-   local edgeEnds = zeros(nEdges,2)
-   local k = 1
-   for i = 1,nNodes do
-      for j = 1,nNodes do
-         if i < j and adj[i][j] == 1 then
-            edgeEnds[k][1] = i
-            edgeEnds[k][2] = j
-            k = k + 1
+   -- construct list of edges, from adjacency matrix
+   local nNodes,nEdges,edgeEnds
+   if type(adj) == 'table' then
+      nNodes = #adj
+      nEdges = 0
+      for node1,nodes2 in ipairs(adj) do
+         for node2 in pairs(nodes2) do
+            nEdges = nEdges + 1
+         end
+      end
+      nEdges = nEdges / 2
+      edgeEnds = zeros(nEdges,2)
+      local k = 1
+      for node1,nodes2 in ipairs(adj) do
+         for node2 in pairs(nodes2) do
+            if node1 < node2 then
+               edgeEnds[k][1] = node1
+               edgeEnds[k][2] = node2
+               k = k + 1
+            end
+         end
+      end
+   else
+      nNodes = adj:size(1)
+      nEdges = adj:sum()/2
+      edgeEnds = zeros(nEdges,2)
+      local k = 1
+      for i = 1,nNodes do
+         for j = 1,nNodes do
+            if i < j and adj[i][j] == 1 then
+               edgeEnds[k][1] = i
+               edgeEnds[k][2] = j
+               k = k + 1
+            end
          end
       end
    end
@@ -126,7 +149,7 @@ function gm.graph(...)
       graph.nStates = Tensor(nNodes):fill(nStates)
    elseif type(nStates) == 'table' then
       if #nStates ~= nNodes then
-         error('#nStates must be equal to nNodes (= adjacency:size(1))')
+         error('#nStates must be equal to nNodes')
       end
       graph.nStates = Tensor{nStates}
    end
