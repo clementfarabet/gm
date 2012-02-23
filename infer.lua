@@ -36,7 +36,6 @@ gm.infer = {}
 local zeros = torch.zeros
 local ones = torch.ones
 local eye = torch.eye
-local Tensor = torch.Tensor
 local sort = torch.sort
 local log = torch.log
 local eps = 1e-15
@@ -61,6 +60,7 @@ function gm.infer.exact(graph)
    end
 
    -- local vars
+   local Tensor = torch.Tensor
    local nNodes = graph.nNodes
    local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
@@ -136,6 +136,7 @@ function gm.infer.bp(graph,maxIter)
    end
 
    -- local vars
+   local Tensor = torch.Tensor
    local nNodes = graph.nNodes
    local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges

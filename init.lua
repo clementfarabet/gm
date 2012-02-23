@@ -47,13 +47,6 @@ torch.include('gm', 'energies.lua')
 torch.include('gm', 'examples.lua')
 torch.include('gm', 'adjacency.lua')
 
--- shortcuts
-local zeros = torch.zeros
-local ones = torch.ones
-local eye = torch.eye
-local Tensor = torch.Tensor
-local sort = torch.sort
-
 ----------------------------------------------------------------------
 -- creates a graph
 --
@@ -71,6 +64,13 @@ function gm.graph(...)
       {arg='maxIter', type='number', help='maximum nb of iterations for loopy graphs', default=1},
       {arg='verbose', type='boolean', help='verbose mode', default=false}
    )
+
+   -- shortcuts
+   local zeros = torch.zeros
+   local ones = torch.ones
+   local eye = torch.eye
+   local Tensor = torch.Tensor
+   local sort = torch.sort
 
    -- graph structure
    local graph = {}

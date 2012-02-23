@@ -36,7 +36,6 @@ gm.decode = {}
 local zeros = torch.zeros
 local ones = torch.ones
 local eye = torch.eye
-local Tensor = torch.Tensor
 local sort = torch.sort
 
 -- messages
@@ -59,6 +58,7 @@ function gm.decode.exact(graph)
    end
 
    -- local vars
+   local Tensor = torch.Tensor
    local nNodes = graph.nNodes
    local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges
@@ -120,6 +120,7 @@ function gm.decode.bp(graph,maxIter)
    end
 
    -- local vars
+   local Tensor = torch.Tensor
    local nNodes = graph.nNodes
    local maxStates = graph.nodePot:size(2)
    local nEdges = graph.nEdges

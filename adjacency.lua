@@ -36,7 +36,6 @@ gm.adjacency = {}
 local zeros = torch.zeros
 local ones = torch.ones
 local eye = torch.eye
-local Tensor = torch.Tensor
 local sort = torch.sort
 local log = torch.log
 local exp = torch.exp

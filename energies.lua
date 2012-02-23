@@ -40,7 +40,6 @@ gm.energies.mrf = {}
 local zeros = torch.zeros
 local ones = torch.ones
 local eye = torch.eye
-local Tensor = torch.Tensor
 local sort = torch.sort
 local log = torch.log
 local exp = torch.exp
@@ -62,6 +61,7 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
    end
 
    -- locals
+   local Tensor = torch.Tensor
    local nInstances = Y:size(1)
    local nNodes = graph.nNodes
    local maxStates = nodeMap:size(2)
@@ -128,6 +128,7 @@ end
 --
 function gm.energies.crf.makePotentials(graph,w,Xnode,Xedge,nodeMap,edgeMap)
    -- locals
+   local Tensor = torch.Tensor
    local nNodes = graph.nNodes
    local maxStates = nodeMap:size(2)
    local nNodeFeatures = Xnode:size(1)
