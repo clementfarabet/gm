@@ -75,6 +75,11 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
    local nll = 0
    local grad = zeros(w:size())
 
+   -- verbose
+   if graph.verbose then
+      print('<gm.energies.crf.nll> computing negative log-likelihood')
+   end
+
    -- compute E=nll and dE/dw
    for i = 1,nInstances do
       -- make potentials
@@ -136,6 +141,11 @@ function gm.energies.crf.makePotentials(graph,w,Xnode,Xedge,nodeMap,edgeMap)
    local nEdges = graph.nEdges
    local nStates = graph.nStates
    local edgeEnds = graph.edgeEnds
+
+   -- verbose
+   if graph.verbose then
+      print('<gm.energies.crf.makePotentials> making potentials from parameters')
+   end
 
    -- generate node potentials
    local nodePot = zeros(nNodes,maxStates)
