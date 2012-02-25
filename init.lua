@@ -282,7 +282,7 @@ function gm.graph(...)
 
    graph.makePotentials = function(g,Xnode,Xedge)
       if not g.w then
-         xlua.error('graph doesnt have parameters, call g:initParameters() first','nll')
+         xlua.error('graph doesnt have parameters, call g:initParameters() first','makePotentials')
       end
       if not Xnode or not Xedge or not gm.energies[g.type] then
          print(xlua.usage('makePotentials',
