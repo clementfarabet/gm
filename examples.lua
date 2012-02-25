@@ -139,22 +139,22 @@ function gm.examples.trainCRF()
 
    -- create node features (normalized X and a bias)
    Xnode = tensor(nInstances,2,nNodes)
-   Xnode:select(2,1):fill(1) -- bias
+   Xnode[{ {},1 }] = 1 -- bias
    -- normalize features:
    nFeatures = X:size(2)
    for f = 1,nFeatures do
-      local Xf = X:select(2,f)
+      local Xf = X[{ {},f }]
       local mu = Xf:mean()
       local sigma = Xf:std()
       Xf:add(-mu):div(sigma)
    end
-   Xnode:select(2,2):copy(X) -- features (simple normalized grayscale)
+   Xnode[{ {},2 }] = X -- features (simple normalized grayscale)
    nNodeFeatures = Xnode:size(2)
 
    -- tie node potentials to parameter vector
    nodeMap = zeros(nNodes,nStates,nNodeFeatures)
    for f = 1,nNodeFeatures do
-      nodeMap:select(3,f):select(2,1):fill(f)
+      nodeMap[{ {},1,f }] = f
    end
 
    -- create edge features
@@ -180,16 +180,16 @@ function gm.examples.trainCRF()
    local f = nodeMap:max()
    edgeMap = zeros(nEdges,nStates,nStates,nEdgeFeatures)
    for ef = 1,nEdgeFeatures do
-      edgeMap:select(4,ef):select(3,1):select(2,1):fill(f+ef)
-      edgeMap:select(4,ef):select(3,2):select(2,2):fill(f+ef)
+      edgeMap[{ {},1,1,ef }] = f+ef
+      edgeMap[{ {},2,2,ef }] = f+ef
    end
 
    -- initialize parameters
    g:initParameters(nodeMap,edgeMap)
 
-   -- and train, for 3 epochs over the training data
+   -- and train on 30 samples
    local learningRate=1e-3
-   for iter = 1,nInstances*3 do
+   for iter = 1,30 do
       local i = floor(uniform(1,nInstances)+0.5)
       local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
       g.w:add(-learningRate, grad)
@@ -203,7 +203,7 @@ function gm.examples.trainCRF()
       g:makePotentials(Xnode[i],Xedge[i])
       nodeBel = g:infer('bp')
       labeling = g:decode('bp')
-      table.insert(marginals,nodeBel:select(2,2):reshape(nRows,nCols))
+      table.insert(marginals,nodeBel[{ {},2 }]:reshape(nRows,nCols))
       table.insert(labelings,labeling:reshape(nRows,nCols))
    end
    image.display{image=marginals, zoom=4, padding=1, nrow=2, legend='marginals'}

@@ -142,8 +142,8 @@ function gm.decode.bp(graph,maxIter)
    for e = 1,nEdges do
       local n1 = edgeEnds[e][1]
       local n2 = edgeEnds[e][2]
-      msg[e]:narrow(1,1,nStates[n2]):fill(1/nStates[n2]) -- n1 ==> n2
-      msg[e+nEdges]:narrow(1,1,nStates[n1]):fill(1/nStates[n1]) -- n2 ==> n1
+      msg[{ e,{1,nStates[n2]} }] = 1/nStates[n2] -- n1 ==> n2
+      msg[{ e+nEdges,{1,nStates[n1]} }] = 1/nStates[n1] -- n2 ==> n1
    end
 
    -- do loopy belief propagation (if maxIter = 1, it's regular bp)
@@ -158,26 +158,26 @@ function gm.decode.bp(graph,maxIter)
          -- send a message to each neighbor
          for k = 1,edges:size(1) do
             local e = edges[k]
-            local n1 = edgeEnds[e][1]
-            local n2 = edgeEnds[e][2]
+            local n1 = edgeEnds[{e,1}]
+            local n2 = edgeEnds[{e,2}]
 
             -- get joint potential
             local pot_ij
             if n == edgeEnds[e][2] then
-               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]
             else
-               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
+               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]:t()
             end
 
             -- compute product of all incoming messages except j
-            local temp = nodePot[n]:narrow(1,1,nStates[n]):clone()
+            local temp = nodePot[{ n,{1,nStates[n]} }]:clone()
             for kk = 1,edges:size(1) do
                local e2 = edges[kk]
                if e2 ~= e then
                   if n == edgeEnds[e2][2] then
-                     temp:cmul( msg[e2]:narrow(1,1,nStates[n]) )
+                     temp:cmul( msg[{ e2,{1,nStates[n]} }] )
                   else
-                     temp:cmul( msg[e2+nEdges]:narrow(1,1,nStates[n]) )
+                     temp:cmul( msg[{ e2+nEdges,{1,nStates[n]} }] )
                   end
                end
             end
@@ -187,9 +187,9 @@ function gm.decode.bp(graph,maxIter)
 
             -- normalize message
             if n == edgeEnds[e][2] then
-               msg[e+nEdges]:narrow(1,1,nStates[n1]):copy(new):div(new:sum())
+               msg[{ e+nEdges,{1,nStates[n1]} }]:copy(new):div(new:sum())
             else
-               msg[e]:narrow(1,1,nStates[n2]):copy(new):div(new:sum())
+               msg[{ e,{1,nStates[n2]} }]:copy(new):div(new:sum())
             end
          end
       end
@@ -212,16 +212,16 @@ function gm.decode.bp(graph,maxIter)
    for n = 1,nNodes do
       local edges = graph:getEdgesOf(n)
       product[n] = nodePot[n]
-      local prod = product[n]:narrow(1,1,nStates[n])
+      local prod = product[{ n, {1,nStates[n]} }]
       for i = 1,edges:size(1) do
          local e = edges[i]
          if n == edgeEnds[e][2] then
-            prod:cmul(msg[e]:narrow(1,1,nStates[n]))
+            prod:cmul(msg[{ e, {1,nStates[n]} }])
          else
-            prod:cmul(msg[e+nEdges]:narrow(1,1,nStates[n]))
+            prod:cmul(msg[{ e+nEdges, {1,nStates[n]} }])
          end
       end
-      nodeBel[n]:narrow(1,1,nStates[n]):copy(prod):div(prod:sum())
+      nodeBel[{ n, {1,nStates[n]} }]:copy(prod):div(prod:sum())
    end
 
    -- get argmax of nodeBel: that's the optimal config

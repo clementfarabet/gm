@@ -159,8 +159,8 @@ function gm.infer.bp(graph,maxIter)
    for e = 1,nEdges do
       local n1 = edgeEnds[e][1]
       local n2 = edgeEnds[e][2]
-      msg[e]:narrow(1,1,nStates[n2]):fill(1/nStates[n2]) -- n1 ==> n2
-      msg[e+nEdges]:narrow(1,1,nStates[n1]):fill(1/nStates[n1]) -- n2 ==> n1
+      msg[{ e,{1,nStates[n2]} }] = 1/nStates[n2] -- n1 ==> n2
+      msg[{ e+nEdges,{1,nStates[n1]} }] = 1/nStates[n1] -- n2 ==> n1
    end
 
    -- do loopy belief propagation (if maxIter = 1, it's regular bp)
@@ -181,20 +181,20 @@ function gm.infer.bp(graph,maxIter)
             -- get joint potential
             local pot_ij
             if n == edgeEnds[e][2] then
-               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]
             else
-               pot_ij = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]):t()
+               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]:t()
             end
 
             -- compute product of all incoming messages except j
-            local temp = nodePot[n]:narrow(1,1,nStates[n]):clone()
+            local temp = nodePot[{ n,{1,nStates[n]} }]:clone()
             for kk = 1,edges:size(1) do
                local e2 = edges[kk]
                if e2 ~= e then
                   if n == edgeEnds[e2][2] then
-                     temp:cmul( msg[e2]:narrow(1,1,nStates[n]) )
+                     temp:cmul( msg[{ e2,{1,nStates[n]} }] )
                   else
-                     temp:cmul( msg[e2+nEdges]:narrow(1,1,nStates[n]) )
+                     temp:cmul( msg[{ e2+nEdges,{1,nStates[n]} }] )
                   end
                end
             end
@@ -204,9 +204,9 @@ function gm.infer.bp(graph,maxIter)
 
             -- normalize message
             if n == edgeEnds[e][2] then
-               msg[e+nEdges]:narrow(1,1,nStates[n1]):copy(new):div(new:sum())
+               msg[{ e+nEdges,{1,nStates[n1]} }]:copy(new):div(new:sum())
             else
-               msg[e]:narrow(1,1,nStates[n2]):copy(new):div(new:sum())
+               msg[{ e,{1,nStates[n2]} }]:copy(new):div(new:sum())
             end
          end
       end
@@ -229,34 +229,41 @@ function gm.infer.bp(graph,maxIter)
    for n = 1,nNodes do
       local edges = graph:getEdgesOf(n)
       product[n] = nodePot[n]
-      local prod = product[n]:narrow(1,1,nStates[n])
+      local prod = product[{ n, {1,nStates[n]} }]
       for i = 1,edges:size(1) do
          local e = edges[i]
          if n == edgeEnds[e][2] then
-            prod:cmul(msg[e]:narrow(1,1,nStates[n]))
+            prod:cmul(msg[{ e, {1,nStates[n]} }])
          else
-            prod:cmul(msg[e+nEdges]:narrow(1,1,nStates[n]))
+            prod:cmul(msg[{ e+nEdges, {1,nStates[n]} }])
          end
       end
-      nodeBel[n]:narrow(1,1,nStates[n]):copy(prod):div(prod:sum())
+      nodeBel[{ n, {1,nStates[n]} }]:copy(prod):div(prod:sum())
    end
 
    -- compute edge beliefs
    for e = 1,nEdges do
       local n1 = edgeEnds[e][1]
       local n2 = edgeEnds[e][2]
-      local belN1 = nodeBel[n1]:narrow(1,1,nStates[n1]):clone():cdiv(msg[e+nEdges]:narrow(1,1,nStates[n1]))
-      local belN2 = nodeBel[n2]:narrow(1,1,nStates[n2]):clone():cdiv(msg[e]:narrow(1,1,nStates[n2]))
+
+      local belN1 = nodeBel[{ n1, {1,nStates[n1]} }]:clone()
+      belN1:cdiv(msg[{ e+nEdges, {1,nStates[n1]} }])
+
+      local belN2 = nodeBel[{ n2, {1,nStates[n2]} }]:clone()
+      belN2:cdiv(msg[{ e, {1,nStates[n2]} }])
+
       local b1 = Tensor(nStates[n1],nStates[n2])
       local b2 = Tensor(nStates[n1],nStates[n2])
+
       for i = 1,nStates[n2] do
-         b1:select(2,i):copy(belN1)
+         b1[{ {}, i }] = belN1
       end
       for i = 1,nStates[n1] do
-         b2:select(1,i):copy(belN2)
+         b2[{ i }] = belN2
       end
-      local eb = edgeBel[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
-      eb:copy(b1):cmul(b2):cmul(edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2]))
+
+      local eb = edgeBel[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
+      eb:copy(b1):cmul(b2):cmul(edgePot[{ e, {1,nStates[n1]}, {1,nStates[n2]} }])
       eb:div(eb:sum())
    end
 
@@ -271,20 +278,21 @@ function gm.infer.bp(graph,maxIter)
       local edges = graph:getEdgesOf(n)
       local nNbrs = edges:size(1)
       -- node entropy
-      local nb = nodeBel[n]:narrow(1,1,nStates[n])
+      local nb = nodeBel[{ n, {1,nStates[n]} }]
       ent1 = ent1 + (nNbrs-1) * log(nb):cmul(nb):sum()
       -- node energy
-      local np = nodePot[n]:narrow(1,1,nStates[n])
+      local np = nodePot[{ n, {1,nStates[n]} }]
       eng1 = eng1 - log(np):cmul(nb):sum()
    end
    for e = 1,nEdges do
       local n1 = edgeEnds[e][1]
       local n2 = edgeEnds[e][2]
       --  pairwise entropy
-      local eb = edgeBel[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+      
+      local eb = edgeBel[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
       ent2 = ent2 - log(eb):cmul(eb):sum()
       -- pairwise energy
-      local ep = edgePot[e]:narrow(1,1,nStates[n1]):narrow(2,1,nStates[n2])
+      local ep = edgePot[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
       eng2 = eng2 - log(ep):cmul(eb):sum()
    end
    local F = (eng1+eng2) - (ent1+ent2)

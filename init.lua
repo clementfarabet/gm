@@ -149,8 +149,8 @@ function gm.graph(...)
          end
          edge = edge + #nodeEdges
       else
-         local nodeEdges = sort(nei[n]:narrow(1,1,nNei[n]))
-         E:narrow(1,edge,nodeEdges:size(1)):copy(nodeEdges)
+         local nodeEdges = sort(nei[{ n,{1,nNei[n]} }])
+         E[{ {edge, edge+nodeEdges:size(1)-1} }] = nodeEdges
          edge = edge + nodeEdges:size(1)
       end
    end
@@ -191,7 +191,7 @@ function gm.graph(...)
 
    -- some functions
    graph.getEdgesOf = function(g,node)
-      return g.E:narrow(1,g.V[node],g.V[node+1]-g.V[node])
+      return g.E[{ {g.V[node],g.V[node+1]-1} }]
    end
 
    graph.getNeighborsOf = function(g,node)
