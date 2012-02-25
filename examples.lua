@@ -189,7 +189,7 @@ function gm.examples.trainCRF()
 
    -- and train on 30 samples
    local learningRate=1e-3
-   for iter = 1,30 do
+   for iter = 1,100 do
       local i = floor(uniform(1,nInstances)+0.5)
       local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
       g.w:add(-learningRate, grad)
