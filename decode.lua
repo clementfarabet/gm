@@ -165,21 +165,8 @@ function gm.decode.bp(graph,maxIter)
       end
    end
 
-   -- compute nodeBel
-   for n = 1,nNodes do
-      local edges = graph:getEdgesOf(n)
-      product[n] = nodePot[n]
-      local prod = product[{ n, {1,nStates[n]} }]
-      for i = 1,edges:size(1) do
-         local e = edges[i]
-         if n == edgeEnds[e][2] then
-            prod:cmul(msg[{ e, {1,nStates[n]} }])
-         else
-            prod:cmul(msg[{ e+nEdges, {1,nStates[n]} }])
-         end
-      end
-      nodeBel[{ n, {1,nStates[n]} }]:copy(prod):div(prod:sum())
-   end
+   -- compute marginal node beliefs
+   msg.gm.bpComputeNodeBeliefs(nodePot,nodeBel,edgeEnds,nStates,E,V,product,msg)
 
    -- get argmax of nodeBel: that's the optimal config
    local pot, optimalconfig = nodeBel:max(2)

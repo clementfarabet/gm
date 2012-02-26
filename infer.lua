@@ -182,47 +182,11 @@ function gm.infer.bp(graph,maxIter)
       end
    end
 
-   -- compute marginal beliefs
-   for n = 1,nNodes do
-      local edges = graph:getEdgesOf(n)
-      product[n] = nodePot[n]
-      local prod = product[{ n, {1,nStates[n]} }]
-      for i = 1,edges:size(1) do
-         local e = edges[i]
-         if n == edgeEnds[e][2] then
-            prod:cmul(msg[{ e, {1,nStates[n]} }])
-         else
-            prod:cmul(msg[{ e+nEdges, {1,nStates[n]} }])
-         end
-      end
-      nodeBel[{ n, {1,nStates[n]} }]:copy(prod):div(prod:sum())
-   end
+   -- compute marginal node beliefs
+   msg.gm.bpComputeNodeBeliefs(nodePot,nodeBel,edgeEnds,nStates,E,V,product,msg)
 
-   -- compute edge beliefs
-   for e = 1,nEdges do
-      local n1 = edgeEnds[e][1]
-      local n2 = edgeEnds[e][2]
-
-      local belN1 = nodeBel[{ n1, {1,nStates[n1]} }]:clone()
-      belN1:cdiv(msg[{ e+nEdges, {1,nStates[n1]} }])
-
-      local belN2 = nodeBel[{ n2, {1,nStates[n2]} }]:clone()
-      belN2:cdiv(msg[{ e, {1,nStates[n2]} }])
-
-      local b1 = Tensor(nStates[n1],nStates[n2])
-      local b2 = Tensor(nStates[n1],nStates[n2])
-
-      for i = 1,nStates[n2] do
-         b1[{ {}, i }] = belN1
-      end
-      for i = 1,nStates[n1] do
-         b2[{ i }] = belN2
-      end
-
-      local eb = edgeBel[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
-      eb:copy(b1):cmul(b2):cmul(edgePot[{ e, {1,nStates[n1]}, {1,nStates[n2]} }])
-      eb:div(eb:sum())
-   end
+   -- compute marginal edge beliefs
+   msg.gm.bpComputeEdgeBeliefs(edgePot,edgeBel,nodeBel,edgeEnds,nStates,E,V,msg)
 
    -- compute negative free energy
    local eng1 = 0
