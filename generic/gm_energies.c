@@ -2,11 +2,6 @@
 #define TH_GENERIC_FILE "generic/gm_energies.c"
 #else
 
-static inline THTensor * torch_(Tensor)(lua_State *L, long idx, bool contiguous) {
-  THTensor *t = (THTensor *)luaT_checkudata(L, idx, torch_(Tensor_id));
-  return THTensor_(newContiguous)(t);
-}
-
 static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
@@ -31,7 +26,7 @@ static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   real *Y = THTensor_(data)(yy);
   real *grad = THTensor_(data)(gd);
 
-  // generate node potentials
+  // compute gradients wrt nodes
   for (long n = 0; n < nNodes; n++) {
     long label = (long)Y[n]-1;
     for (long s = 0; s < nStates[n]; s++) {
@@ -81,7 +76,7 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   real *Y = THTensor_(data)(yy);
   real *grad = THTensor_(data)(gd);
 
-  // generate node potentials
+  // compute gradients wrt edges
   for (long e = 0; e < nEdges; e++) {
     long n1 = edgeEnds[e*2+0]-1;
     long n2 = edgeEnds[e*2+1]-1;
@@ -182,7 +177,7 @@ static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
   real *edgeEnds = THTensor_(data)(ee);
   real *edgePot = THTensor_(data)(ep);
 
-  // generate node potentials
+  // generate edge potentials
   for (long e = 0; e < nEdges; e++) {
     long n1 = edgeEnds[e*2+0]-1;
     long n2 = edgeEnds[e*2+1]-1;

@@ -150,54 +150,11 @@ function gm.decode.bp(graph,maxIter)
    local idx
    for i = 1,maxIter do
       idx = i
-      -- pass messages, for all nodes
-      for n = 1,nNodes do
-         -- find neighbors
-         local edges = graph:getEdgesOf(n)
-
-         -- send a message to each neighbor
-         for k = 1,edges:size(1) do
-            local e = edges[k]
-            local n1 = edgeEnds[{e,1}]
-            local n2 = edgeEnds[{e,2}]
-
-            -- get joint potential
-            local pot_ij
-            if n == edgeEnds[e][2] then
-               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]
-            else
-               pot_ij = edgePot[{ e,{1,nStates[n1]},{1,nStates[n2]} }]:t()
-            end
-
-            -- compute product of all incoming messages except j
-            local temp = nodePot[{ n,{1,nStates[n]} }]:clone()
-            for kk = 1,edges:size(1) do
-               local e2 = edges[kk]
-               if e2 ~= e then
-                  if n == edgeEnds[e2][2] then
-                     temp:cmul( msg[{ e2,{1,nStates[n]} }] )
-                  else
-                     temp:cmul( msg[{ e2+nEdges,{1,nStates[n]} }] )
-                  end
-               end
-            end
-
-            -- compute new message (using max product)
-            local new = pot_ij.gm.maxproduct(pot_ij,temp)
-
-            -- normalize message
-            if n == edgeEnds[e][2] then
-               msg[{ e+nEdges,{1,nStates[n1]} }]:copy(new):div(new:sum())
-            else
-               msg[{ e,{1,nStates[n2]} }]:copy(new):div(new:sum())
-            end
-         end
-      end
+      -- pass messages, for all nodes (true = max of products)
+      msg.gm.bpComputeMessages(nodePot,edgePot,edgeEnds,nStates,E,V,msg,true)
 
       -- check convergence
-      if (msg-msg_old):abs():sum() < 1e-4 then
-         break
-      end
+      if (msg-msg_old):abs():sum() < 1e-4 then break end
       msg_old:copy(msg)
    end
    if graph.verbose then

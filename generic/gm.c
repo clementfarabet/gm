@@ -2,6 +2,11 @@
 #define TH_GENERIC_FILE "generic/gm.c"
 #else
 
+static inline THTensor * torch_(Tensor)(lua_State *L, long idx, bool contiguous) {
+  THTensor *t = (THTensor *)luaT_checkudata(L, idx, torch_(Tensor_id));
+  return THTensor_(newContiguous)(t);
+}
+
 static int gm_(maxproduct)(lua_State *L) {
   // get args
   THTensor *matrix = (THTensor *)luaT_checkudata(L, 1, torch_(Tensor_id));
