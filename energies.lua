@@ -91,37 +91,11 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
       -- update nll
       nll = nll - graph:getLogPotentialForConfig(Y[i]) + logZ
 
-      -- compute grad
-      for n = 1,nNodes do
-         for s = 1,nStates[n] do
-            for f = 1,nNodeFeatures do
-               if nodeMap[n][s][f] > 0 then
-                  local obs = 0
-                  if s == Y[i][n] then
-                     obs = 1
-                  end
-                  grad[nodeMap[n][s][f]] = grad[nodeMap[n][s][f]] + Xnode[i][f][n]*(nodeBel[n][s] - obs)
-               end
-            end
-         end
-      end
-      for e = 1,nEdges do
-         local n1 = edgeEnds[e][1]
-         local n2 = edgeEnds[e][2]
-         for s1 = 1,nStates[n1] do
-            for s2 = 1,nStates[n2] do
-               for f = 1,nEdgeFeatures do
-                  if edgeMap[e][s1][s2][f] > 0 then
-                     local obs = 0
-                     if s1 == Y[i][n1] and s2 == Y[i][n2] then
-                        obs = 1
-                     end
-                     grad[edgeMap[e][s1][s2][f]] = grad[edgeMap[e][s1][s2][f]] + Xedge[i][f][e]*(edgeBel[e][s1][s2] - obs)
-                  end
-               end
-            end
-         end
-      end
+      -- compute gradients wrt nodes
+      grad.gm.crfGradWrtNodes(Xnode[i],nodeMap,w,nStates,Y[i],nodeBel,grad)
+
+      -- compute gradients wrt edges
+      grad.gm.crfGradWrtEdges(Xedge[i],edgeMap,w,edgeEnds,nStates,Y[i],edgeBel,grad)
    end
 
    -- return nll and grad
@@ -148,34 +122,14 @@ function gm.energies.crf.makePotentials(graph,w,Xnode,Xedge,nodeMap,edgeMap)
    end
 
    -- generate node potentials
-   local nodePot = zeros(nNodes,maxStates)
-   for n = 1,nNodes do
-      for s = 1,nStates[n] do
-         for f = 1,nNodeFeatures do
-            if nodeMap[n][s][f] > 0 then
-               nodePot[n][s] = nodePot[n][s] + w[nodeMap[n][s][f]]*Xnode[f][n]
-            end
-         end
-         nodePot[n][s] = exp(nodePot[n][s])
-      end
-   end
+   local nodePot = graph.nodePot or Tensor()
+   nodePot:resize(nNodes,maxStates)
+   nodePot.gm.crfMakeNodePotentials(Xnode,nodeMap,w,nStates,nodePot)
 
    -- generate edge potentials
-   local edgePot = zeros(nEdges,maxStates,maxStates)
-   for e = 1,nEdges do
-      local n1 = edgeEnds[e][1]
-      local n2 = edgeEnds[e][2]
-      for s1 = 1,nStates[n1] do
-         for s2 = 1,nStates[n2] do
-            for f = 1,nEdgeFeatures do
-               if edgeMap[e][s1][s2][f] > 0 then
-                  edgePot[e][s1][s2] = edgePot[e][s1][s2] + w[edgeMap[e][s1][s2][f]]*Xedge[f][e]
-               end
-            end
-            edgePot[e][s1][s2] = exp(edgePot[e][s1][s2])
-         end
-      end
-   end
+   local edgePot = graph.edgePot or Tensor()
+   edgePot:resize(nEdges,maxStates,maxStates)
+   nodePot.gm.crfMakeEdgePotentials(Xedge,edgeMap,w,edgeEnds,nStates,edgePot)
 
    -- store potentials
    graph:setPotentials(nodePot,edgePot)

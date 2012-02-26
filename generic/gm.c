@@ -34,6 +34,10 @@ static int gm_(maxproduct)(lua_State *L) {
     }
   }
 
+  // clean up
+  THTensor_(free)(matrix);
+  THTensor_(free)(vector);
+
   // return result
   luaT_pushudata(L, result, torch_(Tensor_id));
   return 1;

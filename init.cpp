@@ -4,11 +4,15 @@
 #define torch_(NAME) TH_CONCAT_3(torch_, Real, NAME)
 #define torch_string_(NAME) TH_CONCAT_STRING_3(torch., Real, NAME)
 #define gm_(NAME) TH_CONCAT_3(gm_, Real, NAME)
+#define gm_energies_(NAME) TH_CONCAT_3(gm_energies_, Real, NAME)
 
 static const void* torch_FloatTensor_id = NULL;
 static const void* torch_DoubleTensor_id = NULL;
 
 #include "generic/gm.c"
+#include "THGenerateFloatTypes.h"
+
+#include "generic/gm_energies.c"
 #include "THGenerateFloatTypes.h"
 
 extern "C" {
@@ -19,6 +23,9 @@ extern "C" {
 
     gm_FloatInit(L);
     gm_DoubleInit(L);
+
+    gm_energies_FloatInit(L);
+    gm_energies_DoubleInit(L);
 
     return 1;
   }
