@@ -324,54 +324,26 @@ function gm.graph(...)
       return f,g
    end
 
-   graph.getPotentialForConfig = function(g,config)
-      if not config then
+   graph.getPotentialForConfig = function(g,y)
+      if not y then
          print(xlua.usage('getPotentialForConfig',
                'get potential for a given configuration', nil,
                {type='torch.Tensor', help='configuration of all nodes in graph', req=true}))
          xlua.error('missing config','getPotentialForConfig')
       end
-      -- locals
-      local nodePot = g.nodePot
-      local edgePot = g.edgePot
-      local pot = 1
-      -- nodes
-      for n = 1,g.nNodes do
-         pot = pot * nodePot[n][config[n]]
-      end
-      -- edges
-      for e = 1,g.nEdges do
-         local n1 = edgeEnds[e][1]
-         local n2 = edgeEnds[e][2]
-         pot = pot * edgePot[e][config[n1]][config[n2]]
-      end
       -- return potential
-      return pot
+      return g.nodePot.gm.getPotentialForConfig(g.nodePot,g.edgePot,g.edgeEnds,y)
    end
 
-   graph.getLogPotentialForConfig = function(g,config)
-      if not config then
+   graph.getLogPotentialForConfig = function(g,y)
+      if not y then
          print(xlua.usage('getLogPotentialForConfig',
                'get log potential for a given configuration', nil,
                {type='torch.Tensor', help='configuration of all nodes in graph', req=true}))
          xlua.error('missing config','getPotentialForConfig')
       end
-      -- locals
-      local nodePot = g.nodePot
-      local edgePot = g.edgePot
-      local logpot = 1
-      -- nodes
-      for n = 1,g.nNodes do
-         logpot = logpot + math.log(nodePot[n][config[n]])
-      end
-      -- edges
-      for e = 1,g.nEdges do
-         local n1 = edgeEnds[e][1]
-         local n2 = edgeEnds[e][2]
-         logpot = logpot + math.log(edgePot[e][config[n1]][config[n2]])
-      end
       -- return potential
-      return logpot
+      return g.nodePot.gm.getLogPotentialForConfig(g.nodePot,g.edgePot,g.edgeEnds,y)
    end
 
    local tostring = function(g)

@@ -48,8 +48,98 @@ static int gm_(maxproduct)(lua_State *L) {
   return 1;
 }
 
+static int gm_(getPotentialForConfig)(lua_State *L) {
+  // args
+  const void *id = torch_(Tensor_id);
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
+
+  // dims
+  long nNodes = np->size[0];
+  long nEdges = ep->size[0];
+
+  // raw pointers
+  real *nodePot = THTensor_(data)(np);
+  real *edgePot = THTensor_(data)(ep);
+  real *edgeEnds = THTensor_(data)(ee);
+  real *Y = THTensor_(data)(yy);
+
+  // potential
+  real pot = 1;
+
+  // node potentials
+  for (long n = 0; n < nNodes; n++) {
+    pot *= nodePot[n*np->stride[0]+(long)(Y[n]-1)];
+  }
+
+  // edge potentials
+  for (long e = 0; e < nEdges; e++) {
+    long n1 = edgeEnds[e*2+0]-1;
+    long n2 = edgeEnds[e*2+1]-1;
+    pot *= edgePot[e*ep->stride[0]+(long)(Y[n1]-1)*ep->stride[1]+(long)(Y[n2]-1)];
+  }
+
+  // cleanup
+  THTensor_(free)(np);
+  THTensor_(free)(ep);
+  THTensor_(free)(ee);
+  THTensor_(free)(yy);
+
+  // return potential
+  lua_pushnumber(L,pot);
+  return 1;
+}
+
+static int gm_(getLogPotentialForConfig)(lua_State *L) {
+  // args
+  const void *id = torch_(Tensor_id);
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
+
+  // dims
+  long nNodes = np->size[0];
+  long nEdges = ep->size[0];
+
+  // raw pointers
+  real *nodePot = THTensor_(data)(np);
+  real *edgePot = THTensor_(data)(ep);
+  real *edgeEnds = THTensor_(data)(ee);
+  real *Y = THTensor_(data)(yy);
+
+  // potential
+  accreal logpot = 0;
+
+  // node potentials
+  for (long n = 0; n < nNodes; n++) {
+    logpot += log(nodePot[n*np->stride[0]+(long)(Y[n]-1)]);
+  }
+
+  // edge potentials
+  for (long e = 0; e < nEdges; e++) {
+    long n1 = edgeEnds[e*2+0]-1;
+    long n2 = edgeEnds[e*2+1]-1;
+    logpot += log(edgePot[e*ep->stride[0]+(long)(Y[n1]-1)*ep->stride[1]+(long)(Y[n2]-1)]);
+  }
+
+  // cleanup
+  THTensor_(free)(np);
+  THTensor_(free)(ep);
+  THTensor_(free)(ee);
+  THTensor_(free)(yy);
+
+  // return potential
+  lua_pushnumber(L,logpot);
+  return 1;
+}
+
 static const struct luaL_Reg gm_(methods__) [] = {
   {"maxproduct", gm_(maxproduct)},
+  {"getPotentialForConfig", gm_(getPotentialForConfig)},
+  {"getLogPotentialForConfig", gm_(getLogPotentialForConfig)},
   {NULL, NULL}
 };
 
