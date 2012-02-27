@@ -189,35 +189,7 @@ function gm.infer.bp(graph,maxIter)
    msg.gm.bpComputeEdgeBeliefs(edgePot,edgeBel,nodeBel,edgeEnds,nStates,E,V,msg)
 
    -- compute negative free energy
-   local eng1 = 0
-   local eng2 = 0
-   local ent1 = 0
-   local ent2 = 0
-   nodeBel:add(eps)
-   edgeBel:add(eps)
-   for n = 1,nNodes do
-      local edges = graph:getEdgesOf(n)
-      local nNbrs = edges:size(1)
-      -- node entropy
-      local nb = nodeBel[{ n, {1,nStates[n]} }]
-      ent1 = ent1 + (nNbrs-1) * log(nb):cmul(nb):sum()
-      -- node energy
-      local np = nodePot[{ n, {1,nStates[n]} }]
-      eng1 = eng1 - log(np):cmul(nb):sum()
-   end
-   for e = 1,nEdges do
-      local n1 = edgeEnds[e][1]
-      local n2 = edgeEnds[e][2]
-      --  pairwise entropy
-
-      local eb = edgeBel[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
-      ent2 = ent2 - log(eb):cmul(eb):sum()
-      -- pairwise energy
-      local ep = edgePot[{ e, {1,nStates[n1]}, {1,nStates[n2]} }]
-      eng2 = eng2 - log(ep):cmul(eb):sum()
-   end
-   local F = (eng1+eng2) - (ent1+ent2)
-   local logZ = -F
+   local logZ = msg.gm.bpComputeLogZ(nodePot,edgePot,nodeBel,edgeBel,edgeEnds,nStates,E,V)
 
    -- return marginal beliefs, pairwise beliefs, and negative of free energy
    return nodeBel, edgeBel, logZ

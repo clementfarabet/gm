@@ -324,10 +324,145 @@ static int gm_infer_(bpComputeEdgeBeliefs)(lua_State *L) {
   return 0;
 }
 
+static int gm_infer_(bpComputeLogZ)(lua_State *L) {
+  // get args
+  const void *id = torch_(Tensor_id);
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
+  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
+  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, id));
+  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 8, id));
+
+  // dims
+  long nNodes = np->size[0];
+  long nEdges = ep->size[0];
+
+  // raw pointers
+  real *edgeEnds = THTensor_(data)(ee);
+  real *nStates = THTensor_(data)(ns);
+  real *E = THTensor_(data)(EE);
+  real *V = THTensor_(data)(VV);
+
+  // add epsilon to beliefs
+  real eps = 1e-15;
+  THTensor_(add)(nb, nb, eps);
+  THTensor_(add)(eb, eb, eps);
+
+  // vars
+  accreal eng1 = 0;
+  accreal eng2 = 0;
+  accreal ent1 = 0;
+  accreal ent2 = 0;
+  accreal sum;
+  real *tmp_d;
+
+  // temp structures
+  THTensor *nodeBel = THTensor_(new)();
+  THTensor *nodePot = THTensor_(new)();
+  THTensor *edgeBel = THTensor_(new)();
+  THTensor *edgePot = THTensor_(new)();
+  THTensor *tmp = THTensor_(new)();
+
+  // wrt nodes
+  for (long n = 0; n < nNodes; n++) {
+    // find neighbors of node n (Lua: local edges = graph:getEdgesOf(n)
+    real *edges = E + ((long)(V[n])-1);
+    long nEdgesOfNode = (long)(V[n+1]-V[n]);
+
+    // node entropy
+    THTensor_(select)(nodeBel, nb, 0, n);
+    THTensor_(narrow)(nodeBel, NULL, 0, 0, nStates[n]);
+    THTensor_(resizeAs)(tmp, nodeBel);
+    THTensor_(log)(tmp, nodeBel);
+    THTensor_(cmul)(tmp, tmp, nodeBel);
+    sum = 0;
+    tmp_d = THTensor_(data)(tmp);
+    for (long i = 0; i < tmp->size[0]; i++) sum += tmp_d[i];
+    ent1 += (nEdgesOfNode-1) * sum;
+
+    // node energy
+    THTensor_(select)(nodePot, np, 0, n);
+    THTensor_(narrow)(nodePot, NULL, 0, 0, nStates[n]);
+    THTensor_(resizeAs)(tmp, nodePot);
+    THTensor_(log)(tmp, nodePot);
+    THTensor_(cmul)(tmp, tmp, nodeBel);
+    sum = 0;
+    tmp_d = THTensor_(data)(tmp);
+    for (long i = 0; i < tmp->size[0]; i++) sum += tmp_d[i];
+    eng1 -= sum;
+  }
+
+  // wrt edges
+  for (long e = 0; e < nEdges; e++) {
+    // get edge of interest, and its nodes
+    long n1 = edgeEnds[e*2+0]-1;
+    long n2 = edgeEnds[e*2+1]-1;
+
+    // edge entropy
+    THTensor_(select)(edgeBel, eb, 0, e);
+    THTensor_(narrow)(edgeBel, NULL, 0, 0, nStates[n1]);
+    THTensor_(narrow)(edgeBel, NULL, 0, 0, nStates[n2]);
+    THTensor_(resizeAs)(tmp, edgeBel);
+    THTensor_(log)(tmp, edgeBel);
+    THTensor_(cmul)(tmp, tmp, edgeBel);
+    sum = 0;
+    tmp_d = THTensor_(data)(tmp);
+    for (long i = 0; i < edgeBel->size[0]; i++) {
+      for (long j = 0; j < edgeBel->size[1]; j++) {
+        sum += tmp_d[i*tmp->stride[0]+j];
+      }
+    }
+    ent2 -= sum;
+
+    // edge energy
+    THTensor_(select)(edgePot, ep, 0, e);
+    THTensor_(narrow)(edgePot, NULL, 0, 0, nStates[n1]);
+    THTensor_(narrow)(edgePot, NULL, 0, 0, nStates[n2]);
+    THTensor_(resizeAs)(tmp, edgePot);
+    THTensor_(log)(tmp, edgePot);
+    THTensor_(cmul)(tmp, tmp, edgeBel);
+    sum = 0;
+    tmp_d = THTensor_(data)(tmp);
+    for (long i = 0; i < edgeBel->size[0]; i++) {
+      for (long j = 0; j < edgeBel->size[1]; j++) {
+        sum += tmp_d[i*tmp->stride[0]+j];
+      }
+    }
+    eng2 -= sum;
+  }
+
+  // free energy
+  accreal F = (eng1+eng2) - (ent1+ent2);
+  accreal logZ = -F;
+
+  // clean up
+  THTensor_(free)(np);
+  THTensor_(free)(ep);
+  THTensor_(free)(nb);
+  THTensor_(free)(eb);
+  THTensor_(free)(ee);
+  THTensor_(free)(ns);
+  THTensor_(free)(EE);
+  THTensor_(free)(VV);
+  THTensor_(free)(nodeBel);
+  THTensor_(free)(nodePot);
+  THTensor_(free)(edgeBel);
+  THTensor_(free)(edgePot);
+  THTensor_(free)(tmp);
+
+  // return logZ
+  lua_pushnumber(L, logZ);
+  return 1;
+}
+
 static const struct luaL_Reg gm_infer_(methods__) [] = {
   {"bpComputeMessages", gm_infer_(bpComputeMessages)},
   {"bpComputeNodeBeliefs", gm_infer_(bpComputeNodeBeliefs)},
   {"bpComputeEdgeBeliefs", gm_infer_(bpComputeEdgeBeliefs)},
+  {"bpComputeLogZ", gm_infer_(bpComputeLogZ)},
   {NULL, NULL}
 };
 
