@@ -2,6 +2,42 @@
 #define TH_GENERIC_FILE "generic/gm_infer.c"
 #else
 
+static int gm_infer_(bpInitMessages)(lua_State *L) {
+  // get args
+  const void *id = torch_(Tensor_id);
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *msg = (THTensor *)luaT_checkudata(L, 3, id);
+
+  // dims
+  long nEdges = ee->size[0];
+
+  // raw pointers
+  real *edgeEnds = THTensor_(data)(ee);
+  real *nStates = THTensor_(data)(ns);
+  real *message = THTensor_(data)(msg);
+
+  // propagate state normalizations
+  for (long e = 0; e < nEdges; e++) {
+    // get edge of interest, and its nodes
+    long n1 = edgeEnds[e*2+0]-1;
+    long n2 = edgeEnds[e*2+1]-1;
+
+    // propagate
+    for (long s = 0; s < nStates[n2]; s++) {
+      message[e*msg->stride[0]+s*msg->stride[1]] = 1/nStates[n2]; //  n1 ==> n2
+    }
+    for (long s = 0; s < nStates[n1]; s++) {
+      message[(e+nEdges)*msg->stride[0]+s*msg->stride[1]] = 1/nStates[n1]; //  n2 ==> n1
+    }
+  }
+
+  // clean up
+  THTensor_(free)(ee);
+  THTensor_(free)(ns);
+  return 0;
+}
+
 static int gm_infer_(bpComputeMessages)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
@@ -459,6 +495,7 @@ static int gm_infer_(bpComputeLogZ)(lua_State *L) {
 }
 
 static const struct luaL_Reg gm_infer_(methods__) [] = {
+  {"bpInitMessages", gm_infer_(bpInitMessages)},
   {"bpComputeMessages", gm_infer_(bpComputeMessages)},
   {"bpComputeNodeBeliefs", gm_infer_(bpComputeNodeBeliefs)},
   {"bpComputeEdgeBeliefs", gm_infer_(bpComputeEdgeBeliefs)},

@@ -156,12 +156,7 @@ function gm.infer.bp(graph,maxIter)
    local msg_old = zeros(nEdges*2,maxStates)
 
    -- propagate state normalizations
-   for e = 1,nEdges do
-      local n1 = edgeEnds[e][1]
-      local n2 = edgeEnds[e][2]
-      msg[{ e,{1,nStates[n2]} }] = 1/nStates[n2] -- n1 ==> n2
-      msg[{ e+nEdges,{1,nStates[n1]} }] = 1/nStates[n1] -- n2 ==> n1
-   end
+   msg.gm.bpInitMessages(edgeEnds,nStates,msg)
 
    -- do loopy belief propagation (if maxIter = 1, it's regular bp)
    local idx
