@@ -61,7 +61,7 @@ function gm.examples.simple()
    g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, verbose=true}
 
    -- unary potentials
-   nodePot = tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,3},
+   nodePot = tensor{{1,3}, {9,1}, {1,3}, {9,1}, {1,1},
                     {1,3}, {9,1}, {1,3}, {9,1}, {1,1}}
 
    -- joint potentials
