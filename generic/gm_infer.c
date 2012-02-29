@@ -153,6 +153,7 @@ static int gm_infer_(bpComputeMessages)(lua_State *L) {
       real *messg_d = THTensor_(data)(messg);
       for (long i = 0; i < messg->size[0]; i++) sum += messg_d[i];
       THTensor_(div)(messg, messg, sum);
+      if (sum == 0) THError("numeric precision too low, can't compute messages");
     }
   }
 
@@ -218,7 +219,7 @@ static int gm_infer_(bpComputeNodeBeliefs)(lua_State *L) {
       long n1 = edgeEnds[e*2+0]-1;
       long n2 = edgeEnds[e*2+1]-1;
 
-      // 
+      // compute component-wise product
       if (n == n1) {
         THTensor_(select)(messg, msg, 0, e+nEdges);
         THTensor_(narrow)(messg, NULL, 0, 0, nStates[n]);
@@ -237,6 +238,7 @@ static int gm_infer_(bpComputeNodeBeliefs)(lua_State *L) {
     real *prod_d = THTensor_(data)(prod);
     for (long i = 0; i < prod->size[0]; i++) sum += prod_d[i];
     THTensor_(div)(nodeBel, nodeBel, sum);
+    if (sum == 0) THError("numeric precision too low, can't compute node beliefs");
   }
 
   // clean up
@@ -338,6 +340,7 @@ static int gm_infer_(bpComputeEdgeBeliefs)(lua_State *L) {
       }
     }
     THTensor_(div)(edgeBel, edgeBel, sum);
+    if (sum == 0) THError("numeric precision too low, can't compute edge beliefs");
   }
 
   // clean up
