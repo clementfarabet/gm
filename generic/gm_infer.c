@@ -55,13 +55,10 @@ static int gm_infer_(bpComputeMessages)(lua_State *L) {
   long nEdges = ep->size[0];
 
   // raw pointers
-  real *nodePot = THTensor_(data)(np);
-  real *edgePot = THTensor_(data)(ep);
   real *nStates = THTensor_(data)(ns);
   real *edgeEnds = THTensor_(data)(ee);
   real *E = THTensor_(data)(EE);
   real *V = THTensor_(data)(VV);
-  real *message = THTensor_(data)(msg);
 
   // temp structures
   THTensor *pot_ij_src = THTensor_(new)();
@@ -102,7 +99,6 @@ static int gm_infer_(bpComputeMessages)(lua_State *L) {
       for (long kk = 0; kk < nEdgesOfNode; kk++) {
         long ee = edges[kk]-1;
         long nn1 = edgeEnds[ee*2+0]-1;
-        long nn2 = edgeEnds[ee*2+1]-1;
         if (ee != e) {
           if (n == nn1) {
             THTensor_(select)(messg, msg, 0, ee+nEdges);
@@ -217,7 +213,6 @@ static int gm_infer_(bpComputeNodeBeliefs)(lua_State *L) {
       // get edge of interest, and its nodes
       long e = edges[k]-1;
       long n1 = edgeEnds[e*2+0]-1;
-      long n2 = edgeEnds[e*2+1]-1;
 
       // compute component-wise product
       if (n == n1) {
@@ -271,8 +266,6 @@ static int gm_infer_(bpComputeEdgeBeliefs)(lua_State *L) {
   long nEdges = ep->size[0];
 
   // raw pointers
-  real *E = THTensor_(data)(EE);
-  real *V = THTensor_(data)(VV);
   real *edgeEnds = THTensor_(data)(ee);
   real *nStates = THTensor_(data)(ns);
 
@@ -382,7 +375,6 @@ static int gm_infer_(bpComputeLogZ)(lua_State *L) {
   // raw pointers
   real *edgeEnds = THTensor_(data)(ee);
   real *nStates = THTensor_(data)(ns);
-  real *E = THTensor_(data)(EE);
   real *V = THTensor_(data)(VV);
 
   // add epsilon to beliefs
@@ -408,7 +400,6 @@ static int gm_infer_(bpComputeLogZ)(lua_State *L) {
   // wrt nodes
   for (long n = 0; n < nNodes; n++) {
     // find neighbors of node n (Lua: local edges = graph:getEdgesOf(n)
-    real *edges = E + ((long)(V[n])-1);
     long nEdgesOfNode = (long)(V[n+1]-V[n]);
 
     // node entropy

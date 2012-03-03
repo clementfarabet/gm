@@ -5,12 +5,11 @@
 static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
-  THTensor *xn = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *nm = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
+  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, id);
+  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, id);
   THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
   THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
+  THTensor *nb = (THTensor *)luaT_checkudata(L, 6, id);
   THTensor *gd = (THTensor *)luaT_checkudata(L, 7, id);
 
   // dims
@@ -22,7 +21,6 @@ static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   real *nodeMap = THTensor_(data)(nm);
   real *nodeBel = THTensor_(data)(nb);
   real *nStates = THTensor_(data)(ns);
-  real *w = THTensor_(data)(ww);
   real *Y = THTensor_(data)(yy);
   real *grad = THTensor_(data)(gd);
 
@@ -31,35 +29,31 @@ static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
     long label = (long)Y[n]-1;
     for (long s = 0; s < nStates[n]; s++) {
       for (long f = 0; f < nNodeFeatures; f++) {
-        long map = nodeMap[n*nm->stride[0]+s*nm->stride[1]+f];
+        long map = nodeMap[n*nm->stride[0]+s*nm->stride[1]+f*nm->stride[2]];
         if (map > 0) {
           real obs = (s == label) ? 1 : 0;
-          grad[map-1] += Xnode[f*xn->stride[0]+n] * (nodeBel[n*nb->stride[0]+s] - obs);
+          grad[map-1] += Xnode[f*xn->stride[0]+n*xn->stride[1]] 
+                                * (nodeBel[n*nb->stride[0]+s*nb->stride[1]] - obs);
         }
       }
     }
   }
 
   // clean up
-  THTensor_(free)(xn);
-  THTensor_(free)(nm);
-  THTensor_(free)(ww);
   THTensor_(free)(ns);
   THTensor_(free)(yy);
-  THTensor_(free)(nb);
   return 0;
 }
 
 static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
-  THTensor *xe = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *em = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
+  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, id);
+  THTensor *em = (THTensor *)luaT_checkudata(L, 2, id);
   THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
   THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
   THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, id));
+  THTensor *eb = (THTensor *)luaT_checkudata(L, 7, id);
   THTensor *gd = (THTensor *)luaT_checkudata(L, 8, id);
 
   // dims
@@ -71,7 +65,6 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   real *edgeMap = THTensor_(data)(em);
   real *edgeBel = THTensor_(data)(eb);
   real *nStates = THTensor_(data)(ns);
-  real *w = THTensor_(data)(ww);
   real *edgeEnds = THTensor_(data)(ee);
   real *Y = THTensor_(data)(yy);
   real *grad = THTensor_(data)(gd);
@@ -88,7 +81,8 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
           long map = edgeMap[e*em->stride[0]+s1*em->stride[1]+s2*em->stride[2]+f*em->stride[3]];
           if (map > 0) {
             real obs = ((s1 == label1) && (s2 == label2)) ? 1 : 0;
-            grad[map-1] += Xedge[f*xe->stride[0]+e] * (edgeBel[e*eb->stride[0]+s1*eb->stride[1]+s2] - obs);
+            grad[map-1] += Xedge[f*xe->stride[0]+e*xe->stride[1]] 
+                        * (edgeBel[e*eb->stride[0]+s1*eb->stride[1]+s2*eb->stride[2]] - obs);
           }
 
         }
@@ -97,21 +91,17 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   }
 
   // clean up
-  THTensor_(free)(xe);
-  THTensor_(free)(em);
-  THTensor_(free)(ww);
   THTensor_(free)(ee);
   THTensor_(free)(ns);
   THTensor_(free)(yy);
-  THTensor_(free)(eb);
   return 0;
 }
 
 static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
-  THTensor *xn = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *nm = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, id);
+  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, id);
   THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
   THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
   THTensor *np = (THTensor *)luaT_checkudata(L, 5, id);
@@ -135,9 +125,10 @@ static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
     for (long s = 0; s < nStates[n]; s++) {
       long np_i = n*np->stride[0]+s*np->stride[1];
       for (long f = 0; f < nNodeFeatures; f++) {
-        long map = nodeMap[n*nm->stride[0]+s*nm->stride[1]+f];
+        long map = nodeMap[n*nm->stride[0]+s*nm->stride[1]+f*nm->stride[2]];
         if (map > 0) {
-          nodePot[np_i] += w[map-1]*Xnode[n+nNodes*f];
+          nodePot[np_i] += w[map-1]*Xnode[f*xn->stride[0]+n*xn->stride[1]];
+
         }
       }
       nodePot[np_i] = exp(nodePot[np_i]);
@@ -145,8 +136,6 @@ static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
   }
 
   // clean up
-  THTensor_(free)(xn);
-  THTensor_(free)(nm);
   THTensor_(free)(ns);
   THTensor_(free)(ww);
   return 0;
@@ -155,8 +144,8 @@ static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
 static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
-  THTensor *xe = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *em = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
+  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, id);
+  THTensor *em = (THTensor *)luaT_checkudata(L, 2, id);
   THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
   THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
   THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
@@ -187,7 +176,7 @@ static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
         for (long f = 0; f < nEdgeFeatures; f++) {
           long map = edgeMap[e*em->stride[0]+s1*em->stride[1]+s2*em->stride[2]+f*em->stride[3]];
           if (map > 0) {
-            real prod = w[map-1]*Xedge[e+nEdges*f];
+            real prod = w[map-1]*Xedge[f*xe->stride[0]+e*xe->stride[1]];
             edgePot[ep_i] += prod;
           }
         }
@@ -197,8 +186,6 @@ static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
   }
 
   // clean up
-  THTensor_(free)(xe);
-  THTensor_(free)(em);
   THTensor_(free)(ww);
   THTensor_(free)(ee);
   THTensor_(free)(ns);
