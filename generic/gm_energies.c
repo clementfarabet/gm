@@ -69,10 +69,25 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   real *nStates = THTensor_(data)(ns);
   real *edgeEnds = THTensor_(data)(ee);
   real *Y = THTensor_(data)(yy);
-  real *grad = THTensor_(data)(gd);
+
+  // partial gradients
+  long maxthreads = omp_get_max_threads();
+  THTensor **gds = (THTensor **)malloc(sizeof(void*)*maxthreads);
+  real **grads = (real **)malloc(sizeof(void*)*maxthreads);
 
   // compute gradients wrt edges
+#pragma omp parallel
+{
+  // partial gradients
+  long id = omp_get_thread_num();
+  long nthreads = omp_get_num_threads();
+  gds[id] = THTensor_(newWithSize1d)(gd->size[0]);
+  grads[id] = THTensor_(data)(gds[id]);
+
+  // map
+#pragma omp for
   for (long e = 0; e < nEdges; e++) {
+    real *grad = grads[id];
     long n1 = edgeEnds[e*2+0]-1;
     long n2 = edgeEnds[e*2+1]-1;
     long label1 = (long)Y[n1]-1;
@@ -84,15 +99,25 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
           if (map > 0) {
             real obs = ((s1 == label1) && (s2 == label2)) ? 1 : 0;
             grad[map-1] += Xedge[f*xe->stride[0]+e*xe->stride[1]] 
-                        * (edgeBel[e*eb->stride[0]+s1*eb->stride[1]+s2*eb->stride[2]] - obs);
+                  * (edgeBel[e*eb->stride[0]+s1*eb->stride[1]+s2*eb->stride[2]] - obs);
           }
-
         }
       }
     }
   }
 
+  // reduce
+#pragma omp barrier
+  if (id==0) {
+    for (int i = 0; i < nthreads; i++) {
+      THTensor_(cadd)(gd, gd, 1.0, gds[i]);
+    }
+  }
+}
+
   // clean up
+  free(gds);
+  free(grads);
   THTensor_(free)(ee);
   THTensor_(free)(ns);
   THTensor_(free)(yy);
