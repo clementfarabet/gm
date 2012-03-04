@@ -18,6 +18,7 @@ static int gm_infer_(bpInitMessages)(lua_State *L) {
   real *message = THTensor_(data)(msg);
 
   // propagate state normalizations
+#pragma omp parallel for
   for (long e = 0; e < nEdges; e++) {
     // get edge of interest, and its nodes
     long n1 = edgeEnds[e*2+0]-1;

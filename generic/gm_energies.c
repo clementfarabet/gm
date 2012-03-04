@@ -2,6 +2,8 @@
 #define TH_GENERIC_FILE "generic/gm_energies.c"
 #else
 
+#include "omp.h"
+
 static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   // get args
   const void *id = torch_(Tensor_id);
@@ -121,6 +123,7 @@ static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
   real *w = THTensor_(data)(ww);
 
   // generate node potentials
+#pragma omp parallel for
   for (long n = 0; n < nNodes; n++) {
     for (long s = 0; s < nStates[n]; s++) {
       long np_i = n*np->stride[0]+s*np->stride[1];
@@ -167,6 +170,7 @@ static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
   real *edgePot = THTensor_(data)(ep);
 
   // generate edge potentials
+#pragma omp parallel for
   for (long e = 0; e < nEdges; e++) {
     long n1 = edgeEnds[e*2+0]-1;
     long n2 = edgeEnds[e*2+1]-1;
