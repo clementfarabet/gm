@@ -25,7 +25,8 @@
 -- description:
 --     gm - a (super simple) graphical model package for Torch.
 --          for now, it only provides means of decoding graphical
---          models (i.e. computing their highest potential state)
+--          models (i.e. computing their highest potential state),
+--          doing inference, and training CRFs.
 --
 -- history: 
 --     February 2012 - initial draft - Clement Farabet
@@ -52,7 +53,7 @@ torch.include('gm', 'adjacency.lua')
 --
 function gm.graph(...)
    -- usage
-   local _, adj, nStates, nodePot, edgePot, tp, maxIter, verbose = dok.unpack(
+   local args, adj, nStates, nodePot, edgePot, typ, maxIter, verbose = dok.unpack(
       {...},
       'gm.graph',
       'create a graphical model from an adjacency matrix',
@@ -173,7 +174,7 @@ function gm.graph(...)
    graph.adjacency = adj
    graph.maxIter = maxIter
    graph.verbose = verbose
-   graph.type = tp
+   graph.type = args.type
    graph.timer = torch.Timer()
 
    -- type?
