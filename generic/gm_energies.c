@@ -6,13 +6,12 @@
 
 static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, id);
-  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, id);
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *nb = (THTensor *)luaT_checkudata(L, 6, id);
-  THTensor *gd = (THTensor *)luaT_checkudata(L, 7, id);
+  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *nb = (THTensor *)luaT_checkudata(L, 6, torch_Tensor);
+  THTensor *gd = (THTensor *)luaT_checkudata(L, 7, torch_Tensor);
 
   // dims
   long nNodes = nm->size[0];
@@ -49,14 +48,13 @@ static int gm_energies_(crfGradWrtNodes)(lua_State *L) {
 
 static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, id);
-  THTensor *em = (THTensor *)luaT_checkudata(L, 2, id);
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *eb = (THTensor *)luaT_checkudata(L, 7, id);
-  THTensor *gd = (THTensor *)luaT_checkudata(L, 8, id);
+  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *em = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, torch_Tensor));
+  THTensor *eb = (THTensor *)luaT_checkudata(L, 7, torch_Tensor);
+  THTensor *gd = (THTensor *)luaT_checkudata(L, 8, torch_Tensor);
 
   // dims
   long nEdges = em->size[0];
@@ -132,12 +130,11 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
 
 static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, id);
-  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, id);
-  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *np = (THTensor *)luaT_checkudata(L, 5, id);
+  THTensor *xn = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *nm = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *np = (THTensor *)luaT_checkudata(L, 5, torch_Tensor);
 
   // dims
   long nNodes = nm->size[0];
@@ -177,13 +174,12 @@ static int gm_energies_(crfMakeNodePotentials)(lua_State *L) {
 
 static int gm_energies_(crfMakeEdgePotentials)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, id);
-  THTensor *em = (THTensor *)luaT_checkudata(L, 2, id);
-  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *ep = (THTensor *)luaT_checkudata(L, 6, id);
+  THTensor *xe = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *em = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *ww = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *ep = (THTensor *)luaT_checkudata(L, 6, torch_Tensor);
 
   // dims
   long nEdges = ep->size[0];
@@ -237,7 +233,7 @@ static const struct luaL_Reg gm_energies_(methods__) [] = {
 
 static void gm_energies_(Init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, gm_energies_(methods__), "gm");
   lua_pop(L,1);
 }

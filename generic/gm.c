@@ -3,14 +3,14 @@
 #else
 
 static inline THTensor * torch_(Tensor)(lua_State *L, long idx, bool contiguous) {
-  THTensor *t = (THTensor *)luaT_checkudata(L, idx, torch_(Tensor_id));
+  THTensor *t = (THTensor *)luaT_checkudata(L, idx, torch_Tensor);
   return THTensor_(newContiguous)(t);
 }
 
 static int gm_(maxproduct)(lua_State *L) {
   // get args
-  THTensor *matrix = (THTensor *)luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *vector = (THTensor *)luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *matrix = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *vector = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
 
   // dims
   long rows = matrix->size[0];
@@ -44,17 +44,16 @@ static int gm_(maxproduct)(lua_State *L) {
   THTensor_(free)(vector);
 
   // return result
-  luaT_pushudata(L, result, torch_(Tensor_id));
+  luaT_pushudata(L, result, torch_Tensor);
   return 1;
 }
 
 static int gm_(getPotentialForConfig)(lua_State *L) {
   // args
-  const void *id = torch_(Tensor_id);
-  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
 
   // dims
   long nNodes = np->size[0];
@@ -94,11 +93,10 @@ static int gm_(getPotentialForConfig)(lua_State *L) {
 
 static int gm_(getLogPotentialForConfig)(lua_State *L) {
   // args
-  const void *id = torch_(Tensor_id);
-  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *yy = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
 
   // dims
   long nNodes = np->size[0];
@@ -145,7 +143,7 @@ static const struct luaL_Reg gm_(methods__) [] = {
 
 static void gm_(Init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, gm_(methods__), "gm");
   lua_pop(L,1);
 }

@@ -4,10 +4,9 @@
 
 static int gm_infer_(bpInitMessages)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *msg = (THTensor *)luaT_checkudata(L, 3, id);
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *msg = (THTensor *)luaT_checkudata(L, 3, torch_Tensor);
 
   // dims
   long nEdges = ee->size[0];
@@ -41,14 +40,13 @@ static int gm_infer_(bpInitMessages)(lua_State *L) {
 
 static int gm_infer_(bpComputeMessages)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *msg = (THTensor *)luaT_checkudata(L, 7, id);
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, torch_Tensor));
+  THTensor *msg = (THTensor *)luaT_checkudata(L, 7, torch_Tensor);
   bool maxprod = lua_toboolean(L, 8);
 
   // dims
@@ -171,15 +169,14 @@ static int gm_infer_(bpComputeMessages)(lua_State *L) {
 
 static int gm_infer_(bpComputeNodeBeliefs)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *pd = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, id));
-  THTensor *msg = (THTensor *)luaT_checkudata(L, 8, id);
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, torch_Tensor));
+  THTensor *pd = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, torch_Tensor));
+  THTensor *msg = (THTensor *)luaT_checkudata(L, 8, torch_Tensor);
 
   // dims
   long nNodes = np->size[0];
@@ -253,15 +250,14 @@ static int gm_infer_(bpComputeNodeBeliefs)(lua_State *L) {
 
 static int gm_infer_(bpComputeEdgeBeliefs)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, id));
-  THTensor *msg = (THTensor *)luaT_checkudata(L, 8, id);
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, torch_Tensor));
+  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, torch_Tensor));
+  THTensor *msg = (THTensor *)luaT_checkudata(L, 8, torch_Tensor);
 
   // dims
   long nEdges = ep->size[0];
@@ -359,15 +355,14 @@ static int gm_infer_(bpComputeEdgeBeliefs)(lua_State *L) {
 
 static int gm_infer_(bpComputeLogZ)(lua_State *L) {
   // get args
-  const void *id = torch_(Tensor_id);
-  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, id));
-  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, id));
-  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, id));
-  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, id));
-  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, id));
-  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, id));
-  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, id));
-  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 8, id));
+  THTensor *np = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
+  THTensor *ep = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 2, torch_Tensor));
+  THTensor *nb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 3, torch_Tensor));
+  THTensor *eb = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 4, torch_Tensor));
+  THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 5, torch_Tensor));
+  THTensor *ns = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 6, torch_Tensor));
+  THTensor *EE = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 7, torch_Tensor));
+  THTensor *VV = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 8, torch_Tensor));
 
   // dims
   long nNodes = np->size[0];
@@ -500,7 +495,7 @@ static const struct luaL_Reg gm_infer_(methods__) [] = {
 
 static void gm_infer_(Init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, gm_infer_(methods__), "gm");
   lua_pop(L,1);
 }
