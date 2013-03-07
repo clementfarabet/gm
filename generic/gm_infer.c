@@ -2,6 +2,10 @@
 #define TH_GENERIC_FILE "generic/gm_infer.c"
 #else
 
+#ifdef _OPENMP
+#include "omp.h"
+#endif
+
 static int gm_infer_(bpInitMessages)(lua_State *L) {
   // get args
   THTensor *ee = THTensor_(newContiguous)((THTensor *)luaT_checkudata(L, 1, torch_Tensor));
