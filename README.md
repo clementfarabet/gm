@@ -56,5 +56,6 @@ $ torch
 Once loaded, run the little example:
 
 ``` lua
-> gm.testme()
+> gm.examples.simple()
+> gm.examples.trainCRF()
 ```

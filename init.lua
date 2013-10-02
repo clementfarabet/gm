@@ -34,6 +34,7 @@
 
 require 'xlua'
 require 'torch'
+require 'dok'
 
 -- package
 gm = {}
@@ -42,11 +43,11 @@ gm = {}
 require 'libgm'
 
 -- extra code
-torch.include('gm', 'decode.lua')
-torch.include('gm', 'infer.lua')
-torch.include('gm', 'energies.lua')
-torch.include('gm', 'examples.lua')
-torch.include('gm', 'adjacency.lua')
+require 'gm.decode'
+require 'gm.infer'
+require 'gm.energies'
+require 'gm.examples'
+require 'gm.adjacency'
 
 ----------------------------------------------------------------------
 -- creates a graph
