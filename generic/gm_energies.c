@@ -71,7 +71,12 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   real *Y = THTensor_(data)(yy);
 
   // partial gradients
+  // :
+#ifdef _OPENMP
   long maxthreads = omp_get_max_threads();
+#else
+  long maxthreads = 1;
+#endif
   THTensor **gds = (THTensor **)malloc(sizeof(void*)*maxthreads);
   real **grads = (real **)malloc(sizeof(void*)*maxthreads);
   for (int i = 0; i < maxthreads; i++) {
@@ -83,7 +88,11 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
 #pragma omp parallel
 {
   // partial gradients
+#ifdef _OPENMP
   long id = omp_get_thread_num();
+#else
+  long id = 0;
+#endif
   real *grad = grads[id];
   THTensor_(zero)(gds[id]);
 
@@ -111,7 +120,11 @@ static int gm_energies_(crfGradWrtEdges)(lua_State *L) {
   // reduce
 #pragma omp barrier
   if (id==0) {
+#ifdef _OPENMP
     long nthreads = omp_get_num_threads();
+#else
+    long nthreads = 1;
+#endif
     for (int i = 0; i < nthreads; i++) {
       THTensor_(cadd)(gd, gd, 1.0, gds[i]);
     }

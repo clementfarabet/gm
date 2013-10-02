@@ -126,10 +126,15 @@ function gm.examples.trainCRF()
    end
    X = X + randn(X:size())/2
    -- display a couple of input examples
-   require 'image'
-   image.display{image={X[1]:reshape(32,32),X[2]:reshape(32,32),
-                        X[3]:reshape(32,32),X[4]:reshape(32,32)}, 
-                 zoom=4, padding=1, nrow=2, legend='training examples'}
+   require 'gfx.js'
+   gfx.image({
+      X[1]:reshape(32,32),
+      X[2]:reshape(32,32),
+      X[3]:reshape(32,32),
+      X[4]:reshape(32,32)
+   }, {
+      zoom=4, legend='training examples'
+   })
 
    -- define adjacency matrix (4-connexity lattice)
    local adj = gm.adjacency.lattice2d(nRows,nCols,4)
@@ -206,6 +211,15 @@ function gm.examples.trainCRF()
       table.insert(marginals,nodeBel[{ {},2 }]:reshape(nRows,nCols))
       table.insert(labelings,labeling:reshape(nRows,nCols))
    end
-   image.display{image=marginals, zoom=4, padding=1, nrow=2, legend='marginals'}
-   image.display{image=labelings, zoom=4, padding=1, nrow=2, legend='labeling'}
+
+   -- display
+   gfx.image(marginals, {
+      zoom=4, legend='marginals'
+   })
+   for _,labeling in ipairs(labelings) do
+      labeling:add(-1)
+   end
+   gfx.image(labelings, {
+      zoom=4, legend='labelings'
+   })
 end
