@@ -38,7 +38,7 @@ $ [sudo] make install
 2/ Once Torch7 is available, install this package:
 
 ``` sh
-$ [sudo] torch-pkg install gm
+$ [sudo] torch-rocks install gm
 ```
 
 ## Use the library
