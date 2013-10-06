@@ -128,6 +128,8 @@ function gm.examples.trainMRF()
    -- to 2. The node beliefs obtained after training should show that.
 
    -- tie node potentials to parameter vector
+   -- NOTE: we allocate one parameter per node, to properly model
+   -- the probability of each node
    nodeMap = zeros(nNodes,nStates)
    for n = 1,nNodes do
       nodeMap[{ n,1 }] = n
