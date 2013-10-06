@@ -124,6 +124,9 @@ function gm.examples.trainMRF()
       end
    end
 
+   -- NOTE: the 10 training nodes in Y have probability 0, 1/9, ... , 9/9 to be equal
+   -- to 2. The node beliefs obtained after training should show that.
+
    -- tie node potentials to parameter vector
    nodeMap = zeros(nNodes,nStates)
    for n = 1,nNodes do
@@ -150,12 +153,13 @@ function gm.examples.trainMRF()
    -- gen final potentials
    g:makePotentials()
 
-   -- exact inference
+   -- exact decoding:
    local exact = g:decode('exact')
    print()
    print('<gm.testme> exact optimal config:')
    print(exact)
 
+   -- exact inference:
    local nodeBel,edgeBel,logZ = g:infer('exact')
    print('<gm.testme> node beliefs:')
    print(nodeBel)
