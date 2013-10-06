@@ -113,18 +113,21 @@ function gm.examples.trainCRF()
    nNodes = nRows*nCols
    nStates = 2
    nInstances = 100
+
    -- make labels (MAP):
    y = tensor(nInstances,nRows*nCols)
    for i = 1,nInstances do
       y[i] = sample
    end
    y = y + 1
+
    -- make noisy training data:
    X = tensor(nInstances,1,nRows*nCols)
    for i = 1,nInstances do
       X[i] = sample
    end
    X = X + randn(X:size())/2
+
    -- display a couple of input examples
    require 'gfx.js'
    gfx.image({
@@ -193,12 +196,25 @@ function gm.examples.trainCRF()
    g:initParameters(nodeMap,edgeMap)
 
    -- and train on 30 samples
-   local learningRate=1e-3
+   require 'optim'
+   local sgdState = {
+      learningRate = 1e-3,
+      learningRateDecay = 1e-2,
+      weightDecay = 1e-5,
+   }
    for iter = 1,100 do
-      local i = floor(uniform(1,nInstances)+0.5)
-      local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
-      g.w:add(-learningRate, grad)
-      print('SGD @ iteration ' .. iter .. ': objective = ' .. f)
+      -- SGD step:
+      optim.sgd(function()
+         -- random sample:
+         local i = torch.random(1,nInstances)
+         -- compute f+grad:
+         local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
+         -- verbose:
+         print('SGD @ iteration ' .. iter .. ': objective = ', f)
+         -- return f+grad:
+         return f,grad
+      end, 
+      g.w, sgdState)
    end
 
    -- the model is trained, generate node/edge potentials, and test

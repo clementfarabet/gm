@@ -293,7 +293,7 @@ function gm.graph(...)
                {type='torch.Tensor', help='edge features', req=true}))
          xlua.error('missing arguments / incorrect graph','makePotentials')
       end
-      gm.energies.crf.makePotentials(g,g.w,Xnode,Xedge,g.nodeMap,g.edgeMap)
+      gm.energies[g.type].makePotentials(g,g.w,Xnode,Xedge,g.nodeMap,g.edgeMap)
    end
 
    graph.nll = function(g,Xnode,Xedge,y,method,maxIter)
