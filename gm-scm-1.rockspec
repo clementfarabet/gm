@@ -1,9 +1,9 @@
 package = "gm"
-version = "1.0-0"
+version = "scm-1"
 
 source = {
-   url = "git://github.com/clementfarabet/lua---gm",
-   tag = "1.0-0"
+   url = "git://github.com/clementfarabet/gm",
+   branch = "master"
 }
 
 description = {
@@ -12,7 +12,7 @@ description = {
 This package provides routines to create graphical models,
 and perform common operations on them: decoding, inference, and parameter estimation.
    ]],
-   homepage = "https://github.com/clementfarabet/lua---gm",
+   homepage = "https://github.com/clementfarabet/gm",
    license = "BSD"
 }
 
