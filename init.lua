@@ -179,10 +179,8 @@ function gm.graph(...)
    graph.timer = torch.Timer()
 
    -- type?
-   if graph.type == 'crf' or graph.type == 'generic' then
+   if graph.type == 'crf' or graph.type == 'mrf' or graph.type == 'generic' then
       -- all good
-   elseif graph.type == 'mrf' then
-      xlua.error('mrf not supported yet', 'gm.graph')
    else
       xlua.error('unknown graph type: ' .. graph.type, 'gm.graph')
    end
@@ -282,48 +280,71 @@ function gm.graph(...)
       g.w = zeros(g.nParams)
    end
 
-   graph.makePotentials = function(g,Xnode,Xedge)
+   graph.makePotentials = function(g,...)
+      local Xnode,Xedge
+      local args = {...}
+      if g.type == 'crf' then
+         Xnode = args[1]
+         Xedge = args[2]
+      end
       if not g.w then
          xlua.error('graph doesnt have parameters, call g:initParameters() first','makePotentials')
       end
-      if not Xnode or not Xedge or not gm.energies[g.type] then
+      if (g.type == 'crf' and not Xnode) then
          print(xlua.usage('makePotentials',
-               'make potentials from internal parameters (for crf/mrf graphs) and given node/edge features', nil,
+               'make potentials from internal parameters (for crf graphs) and given node/edge features', nil,
                {type='torch.Tensor', help='node features', req=true},
                {type='torch.Tensor', help='edge features', req=true}))
          xlua.error('missing arguments / incorrect graph','makePotentials')
       end
-      gm.energies[g.type].makePotentials(g,g.w,Xnode,Xedge,g.nodeMap,g.edgeMap)
+      gm.energies[g.type].makePotentials(g,g.w,g.nodeMap,g.edgeMap,Xnode,Xedge)
    end
 
-   graph.nll = function(g,Xnode,Xedge,y,method,maxIter)
+   graph.nll = function(g,method,Y,Xnode,Xedge)
       if not g.w then
          xlua.error('graph doesnt have parameters, call g:initParameters() first','nll')
       end
-      if not Xnode or not Xedge or not y or not method or not gm.infer[method] or not gm.energies[g.type] then
+      if not Y or not method or not gm.infer[method] or not gm.energies[g.type] then
          local availmethods = {}
          for k in pairs(gm.infer) do
             table.insert(availmethods,k)
          end
          availmethods = table.concat(availmethods, ' | ')
-         print(xlua.usage('nll',
-               'compute negative log-likelihood of CRF/MRF, and its gradient wrt weights', nil,
-               {type='torch.Tensor', help='node features', req=true},
-               {type='torch.Tensor', help='edge features', req=true},
-               {type='torch.Tensor', help='labeling', req=true},
+         if g.type == 'crf' then
+            print(xlua.usage('nll',
+               'compute negative log-likelihood of CRF, and its gradient wrt weights', nil,
                {type='string', help='inference method: ' .. availmethods, req=true},
-               {type='number', help='maximum nb of iterations (used by some methods)', default='graph.maxIter'}))
+               {type='torch.Tensor', help='labeling', req=true},
+               {type='torch.Tensor', help='node features', req=true},
+               {type='torch.Tensor', help='edge features', req=true}
+               ))
+         elseif g.type == 'mrf' then
+            print(xlua.usage('nll',
+               'compute negative log-likelihood of MRF, and its gradient wrt weights', nil,
+               {type='string', help='inference method: ' .. availmethods, req=true},
+               {type='torch.Tensor', help='node values', req=true}
+               ))
+         end
          xlua.error('missing/incorrect arguments / incorrect graph','nll')
       end
       graph.timer:reset()
-      local f,g = gm.energies[g.type].nll(g, g.w, Xnode, Xedge, y,
-                                          g.nodeMap,g.edgeMap, method,
-                                          maxIter or g.maxIter)
+      local f,grad
+      if g.type == 'crf' then
+         f,grad = gm.energies[g.type].nll(g, g.w,
+                                       g.nodeMap,g.edgeMap, method,
+                                       g.maxIter,
+                                       Y, Xnode, Xedge)
+      elseif g.type == 'mrf' then
+         f,grad = gm.energies[g.type].nll(g, g.w,
+                                       g.nodeMap,g.edgeMap, method,
+                                       g.maxIter,
+                                       Y)
+      end
       local t = graph.timer:time()
       if g.verbose then
          print('<gm.nll.'..method..'> computed negative log-likelihood in ' .. t.real .. 'sec')
       end
-      return f,g
+      return f,grad
    end
 
    graph.getPotentialForConfig = function(g,y)

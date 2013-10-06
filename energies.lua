@@ -52,7 +52,7 @@ end
 ----------------------------------------------------------------------
 -- Negative log-likelihood of a CRF
 --
-function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,maxIter)
+function gm.energies.crf.nll(graph,w,nodeMap,edgeMap,inferMethod,maxIter,Y,Xnode,Xedge)
    -- check sizes
    if Xnode:nDimension() == 2 then -- single example
       Xnode = Xnode:reshape(1,Xnode:size(1),Xnode:size(2))
@@ -83,7 +83,7 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
    -- compute E=nll and dE/dw
    for i = 1,nInstances do
       -- make potentials
-      gm.energies.crf.makePotentials(graph,w,Xnode[i],Xedge[i],nodeMap,edgeMap)
+      gm.energies.crf.makePotentials(graph,w,nodeMap,edgeMap,Xnode[i],Xedge[i])
 
       -- perform inference
       local nodeBel,edgeBel,logZ = graph:infer(inferMethod,maxIter)
@@ -103,9 +103,85 @@ function gm.energies.crf.nll(graph,w,Xnode,Xedge,Y,nodeMap,edgeMap,inferMethod,m
 end
 
 ----------------------------------------------------------------------
+-- Negative log-likelihood of an MRF
+--
+function gm.energies.mrf.nll(graph,w,nodeMap,edgeMap,inferMethod,maxIter,Y)
+   -- locals
+   local Tensor = torch.Tensor
+   local nNodes = graph.nNodes
+   local nEdges = graph.nEdges
+   local nStates = graph.nStates
+   local edgeEnds = graph.edgeEnds
+   local maxStates = nodeMap:size(2)
+   local nInstances = Y:size(1)
+
+   -- verbose
+   if graph.verbose then
+      print('<gm.energies.mrf.nll> computing negative log-likelihood')
+   end
+
+   -- compute sufficient statistics
+   local suffStats = g.w:clone():zero()
+   for i = 1,nInstances do
+      local y = Y[i]
+      for n = 1,nNodes do
+         local idx = nodeMap[n][y[n]]
+         if idx > 0 then
+            suffStats[idx] = suffStats[idx] + 1
+         end
+      end
+      for e = 1,nEdges do
+         local n1 = edgeEnds[e][1]
+         local n2 = edgeEnds[e][2]
+         local idx = edgeMap[e][y[n1]][y[n2]]
+         if idx > 0 then
+            suffStats[idx] = suffStats[idx] + 1
+         end
+      end
+   end
+
+   -- make potentials
+   gm.energies.mrf.makePotentials(graph,w,nodeMap,edgeMap)
+
+   -- perform inference
+   local nodeBel,edgeBel,logZ = graph:infer(inferMethod,maxIter)
+
+   -- update nll
+   local nll = -w*suffStats + logZ*nInstances
+
+   -- compute gradients wrt nodes
+   local grad = suffStats:clone():mul(-1)
+   for n = 1,nNodes do
+      for s = 1,nStates[n] do
+         local idx = nodeMap[n][s]
+         if idx > 0 then
+            grad[idx] = grad[idx] + nInstances * nodeBel[n][s]
+         end
+      end
+   end
+
+   -- compute gradients wrt edges
+   for e = 1,nEdges do
+      local n1 = edgeEnds[e][1]
+      local n2 = edgeEnds[e][2]
+        for s1 = 1,nStates[n1] do
+            for s2 = 1,nStates[n2] do
+               local idx = edgeMap[e][s1][s2]
+               if idx > 0 then
+                  grad[idx] = grad[idx] + nInstances * edgeBel[e][s1][s2]
+               end
+            end
+        end
+    end
+
+   -- return nll and grad
+   return nll,grad
+end
+
+----------------------------------------------------------------------
 -- Make potentials for a CRF
 --
-function gm.energies.crf.makePotentials(graph,w,Xnode,Xedge,nodeMap,edgeMap)
+function gm.energies.crf.makePotentials(graph,w,nodeMap,edgeMap,Xnode,Xedge)
    -- locals
    local Tensor = torch.Tensor
    local nNodes = graph.nNodes
@@ -130,6 +206,62 @@ function gm.energies.crf.makePotentials(graph,w,Xnode,Xedge,nodeMap,edgeMap)
    local edgePot = graph.edgePot or Tensor()
    edgePot:resize(nEdges,maxStates,maxStates)
    nodePot.gm.crfMakeEdgePotentials(Xedge,edgeMap,w,edgeEnds,nStates,edgePot)
+
+   -- store potentials
+   graph:setPotentials(nodePot,edgePot)
+end
+
+----------------------------------------------------------------------
+-- Make potentials for an MRF
+--
+function gm.energies.mrf.makePotentials(graph,w,nodeMap,edgeMap)
+   -- locals
+   local Tensor = torch.Tensor
+   local exp = math.exp
+   local nNodes = graph.nNodes
+   local maxStates = nodeMap:size(2)
+   local nEdges = graph.nEdges
+   local nStates = graph.nStates
+   local edgeEnds = graph.edgeEnds
+
+   -- verbose
+   if graph.verbose then
+      print('<gm.energies.mrf.makePotentials> making potentials from parameters')
+   end
+
+   -- generate node potentials
+   local nodePot = graph.nodePot or Tensor()
+   nodePot:resize(nNodes,maxStates)
+   nodePot:zero()
+   for n = 1,nNodes do
+      for s = 1,nStates[n] do
+         local idx = nodeMap[n][s]
+         if idx == 0 then
+            nodePot[n][s] = 1
+         else
+            nodePot[n][s] = exp(w[idx])
+         end
+      end
+   end
+
+   -- generate edge potentials
+   local edgePot = graph.edgePot or Tensor()
+   edgePot:resize(nEdges,maxStates,maxStates)
+   edgePot:zero()
+   for e = 1,nEdges do
+      local n1 = edgeEnds[e][1]
+      local n2 = edgeEnds[e][2]
+      for s1 = 1,nStates[n1] do
+         for s2 = 1,nStates[n2] do
+            local idx = edgeMap[e][s1][s2]
+            if idx == 0 then
+               edgePot[e][s1][s2] = 1
+            else
+               edgePot[e][s1][s2] = exp(w[idx])
+            end
+         end
+      end
+   end
 
    -- store potentials
    graph:setPotentials(nodePot,edgePot)

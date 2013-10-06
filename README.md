@@ -30,5 +30,6 @@ Once loaded, run the examples:
 
 ``` lua
 > gm.examples.simple()
+> gm.examples.trainMRF()
 > gm.examples.trainCRF()
 ```

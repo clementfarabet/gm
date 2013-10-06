@@ -104,6 +104,66 @@ function gm.examples.simple()
 end
 
 ----------------------------------------------------------------------
+-- Example of how to train an MRF
+--
+function gm.examples.trainMRF()
+   -- define graph:
+   nNodes = 10
+   nStates = 2
+   adjacency = gm.adjacency.full(nNodes)
+   g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, type='mrf', verbose=true}
+
+   -- define training set:
+   nInstances = 100
+   Y = tensor(nInstances,nNodes)
+   for i = 1,nInstances do
+      -- each entry is either 1 or 2, with a probability that
+      -- increases with the node index
+      for n = 1,nNodes do
+         Y[i][n] = torch.bernoulli((n-1)/(nNodes-1)) + 1
+      end
+   end
+
+   -- tie node potentials to parameter vector
+   nodeMap = zeros(nNodes,nStates)
+   for n = 1,nNodes do
+      nodeMap[{ n,1 }] = n
+   end
+
+   -- tie edge potentials to parameter vector
+   nEdges = g.edgeEnds:size(1)
+   edgeMap = zeros(nEdges,nStates,nStates)
+   edgeMap[{ {},1,1 }] = nNodes+1
+   edgeMap[{ {},2,2 }] = nNodes+1
+
+   -- initialize parameters
+   g:initParameters(nodeMap,edgeMap)
+   
+   -- estimate nll:
+   require 'optim'
+   optim.lbfgs(function()
+      local f,grad = g:nll('exact',Y)
+      print('LBFGS – objective = ', f)
+      return f,grad
+   end, g.w, {maxIter=100, lineSearch=optim.lswolfe})
+
+   -- gen final potentials
+   g:makePotentials()
+
+   -- exact inference
+   local exact = g:decode('exact')
+   print()
+   print('<gm.testme> exact optimal config:')
+   print(exact)
+
+   local nodeBel,edgeBel,logZ = g:infer('exact')
+   print('<gm.testme> node beliefs:')
+   print(nodeBel)
+   print('<gm.testme> log(Z):')
+   print(logZ)
+end
+
+----------------------------------------------------------------------
 -- Example of how to train a CRF for a simple segmentation task
 --
 function gm.examples.trainCRF()
@@ -208,7 +268,7 @@ function gm.examples.trainCRF()
          -- random sample:
          local i = torch.random(1,nInstances)
          -- compute f+grad:
-         local f,grad = g:nll(Xnode[i],Xedge[i],y[i],'bp')
+         local f,grad = g:nll('bp',y[i],Xnode[i],Xedge[i])
          -- verbose:
          print('SGD @ iteration ' .. iter .. ': objective = ', f)
          -- return f+grad:
