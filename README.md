@@ -1,10 +1,19 @@
-# gm: a package to create and use graphical models
+# gm: graphical models
+## inference, decoding, parameter estimation
 
 This package provides standard functions to create (arbitrary) 
-undirected graphical models, and decode/infer their optimal 
-(maximum potential) state.
+undirected graphical models, using adjacency matrices.
 
-Note: this code is heavily based on 
+A graph is described by an adjacency matrix, node potentials
+and edge potentials. Three common tasks are implemented:
+
+* Decoding: finding the joint configuration of the variables with the highest probability.
+* Inference: computing the normalization constant Z, as well as the probabilities of each variable taking each state.
+* Training (or parameter estimation): the task of computing the potentials that maximize the likelihood of a set of data.
+
+Note: training is only implemented for CRF objectives (conditional random fields), not MRFs.
+
+Note 2: this code is heavily based on 
 [UGM](http://www.di.ens.fr/~mschmidt/Software/UGM.html), 
 from Mark Schmidt.
 
