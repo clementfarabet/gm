@@ -153,27 +153,30 @@ local function sampleY(g,Z)
    return y
 end
 
+-- Returns a sample from a discrete probability mass function indexed by p
+local function sampleDiscrete(p)
+   local U = uniform(0,1)
+   local u = 0
+   local y
+   for i = 1,p:size(1) do
+      u = u + p[i]
+      if u > U then
+         y = i
+         return y
+      end
+   end
+   y = p:size(1)
+   return y
+end
+
 ----------------------------------------------------------------------
 -- exact, brute-force sampling: only adapted to super small graphs
 --
-function gm.sample.exact(graph, N)
-   -- check args
-   if not graph.nodePot or not graph.edgePot then
-      xlua.error('missing nodePot/edgePot, please call graph:setFactors(...)','infer')
-   end
-
+function gm.sample.exact(g, N)
    -- verbose
-   if graph.verbose then
+   if g.verbose then
       print('<gm.sample.exact> doing exact sampling')
    end
-
-   -- local vars
-   local Tensor = torch.Tensor
-   local nNodes = graph.nNodes
-   local maxStates = graph.nodePot:size(2)
-   local nEdges = graph.nEdges
-   local nStates = graph.nStates
-   local edgeEnds = graph.edgeEnds
 
    -- Z
    local Z = computeZ(g)
@@ -182,6 +185,63 @@ function gm.sample.exact(graph, N)
    local samples = zeros(N,nNodes)
    for i = 1,N do
       samples[i] = sampleY(g,Z)
+   end
+   return samples
+end
+
+----------------------------------------------------------------------
+-- Gibbs sampling (approximate)
+--
+function gm.sample.gibbs(g, N, burnIn)
+   -- Skip steps
+   burnIn = burnIn or 0
+
+   -- Locals
+   local Tensor = torch.Tensor
+   local nodePot = g.nodePot
+   local edgePot = g.edgePot
+   local edgeEnds = g.edgeEnds
+   local nStates = g.nStates
+   local nNodes = g.nNodes
+   local nEdges = g.nEdges
+   local maxStates = g.nodePot:size(2)
+   local V = g.V
+   local E = g.E
+
+   -- Initial y
+   local _,y = nodePot:max(2)
+   y = y:squeeze()
+
+   -- Samples
+   local samples = zeros(N,nNodes)
+   for i = 1,burnIn+N do
+      for n = 1,nNodes do
+         -- Compute Node Potential
+         local pot = nodePot[{ n,{1,nStates[n]} }]:clone()
+
+         -- Find Neighbors
+         local edges = E[{ {V[n],V[n+1]-1} }]
+
+         -- Multiply Edge Potentials
+         for t = 1,edges:size(1) do
+            local e = edges[t]
+            local n1 = edgeEnds[e][1]
+            local n2 = edgeEnds[e][2]
+            local ep
+            if n == edgeEnds[e][1] then
+               ep = edgePot[{ e, {1,nStates[n1]}, y[n2] }]
+            else
+               ep = edgePot[{ e, y[n1], {1,nStates[n2]} }]
+            end
+            pot:cmul(ep)
+         end
+
+         -- Sample State
+         y[n] = sampleDiscrete( pot/pot:sum() )
+      end
+      if i > burnIn then
+         samples[i-burnIn] = y
+      end
    end
    return samples
 end

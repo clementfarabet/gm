@@ -181,6 +181,10 @@ function gm.examples.trainMRF()
    local samples = g:sample('exact',5)
    print('<gm.testme> 5 samples from model:')
    print(samples)
+
+   local samples = g:sample('gibbs',5)
+   print('<gm.testme> 5 samples from model (Gibbs):')
+   print(samples)
 end
 
 ----------------------------------------------------------------------
