@@ -110,7 +110,11 @@ function gm.examples.trainMRF()
    -- define graph:
    nNodes = 10
    nStates = 2
-   adjacency = gm.adjacency.full(nNodes)
+   adjacency = torch.zeros(nNodes,nNodes)
+   for i = 1,nNodes-1 do
+      adjacency[i][i+1] = 1
+      adjacency[i+1][i] = 1
+   end
    g = gm.graph{adjacency=adjacency, nStates=nStates, maxIter=10, type='mrf', verbose=true}
 
    -- define training set:
@@ -122,6 +126,8 @@ function gm.examples.trainMRF()
       for n = 1,nNodes do
          Y[i][n] = torch.bernoulli((n-1)/(nNodes-1)) + 1
       end
+      -- create correlation between last two nodes
+      Y[i][nNodes-1] = Y[i][nNodes]
    end
 
    -- NOTE: the 10 training nodes in Y have probability 0, 1/9, ... , 9/9 to be equal
@@ -136,10 +142,13 @@ function gm.examples.trainMRF()
    end
 
    -- tie edge potentials to parameter vector
+   -- NOTE: we allocate parameters globally, i.e. parameters model
+   -- pairwise relations globally
    nEdges = g.edgeEnds:size(1)
    edgeMap = zeros(nEdges,nStates,nStates)
    edgeMap[{ {},1,1 }] = nNodes+1
-   edgeMap[{ {},2,2 }] = nNodes+1
+   edgeMap[{ {},2,2 }] = nNodes+2
+   edgeMap[{ {},1,2 }] = nNodes+3
 
    -- initialize parameters
    g:initParameters(nodeMap,edgeMap)
@@ -163,10 +172,10 @@ function gm.examples.trainMRF()
 
    -- exact inference:
    local nodeBel,edgeBel,logZ = g:infer('exact')
-   print('<gm.testme> node beliefs:')
-   print(nodeBel)
-   print('<gm.testme> log(Z):')
-   print(logZ)
+   print('<gm.testme> node beliefs (prob that node=2)')
+   print(nodeBel[{ {},2 }])
+   print('<gm.testme> edge beliefs (prob that node1=2 & node2=2)')
+   print(edgeBel[{ {},2,2 }])
 end
 
 ----------------------------------------------------------------------
