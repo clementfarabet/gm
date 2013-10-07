@@ -1,11 +1,14 @@
-# gm: graphical models
-## inference, decoding, parameter estimation
+# GM: Graphical Models for Torch/LuaJIT
 
 This package provides standard functions to create (arbitrary) 
 undirected graphical models, using adjacency matrices.
 
 A graph is described by an adjacency matrix, node potentials
-and edge potentials. Three common tasks are implemented:
+and edge potentials. 
+
+## Inference, Decoding, Sampling, Parameter estimation
+
+Four common tasks are implemented:
 
 * Decoding: finding the joint configuration of the variables with the highest 
 joint probability;
@@ -44,7 +47,7 @@ $ torch
 > require 'gm'
 ```
 
-Once loaded, run the examples:
+Once loaded, see and run the examples:
 
 ``` lua
 > gm.examples.simple()
