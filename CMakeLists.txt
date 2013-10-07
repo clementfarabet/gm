@@ -10,7 +10,7 @@ IF (OPENMP_FOUND)
 ENDIF (OPENMP_FOUND)
 
 SET(src init.cpp)
-SET(luasrc init.lua decode.lua infer.lua energies.lua examples.lua adjacency.lua X.t7)
+SET(luasrc init.lua decode.lua sample.lua infer.lua energies.lua examples.lua adjacency.lua X.t7)
 
 ADD_TORCH_PACKAGE(gm "${src}" "${luasrc}" "Graphical Models")
 TARGET_LINK_LIBRARIES(gm luaT TH)

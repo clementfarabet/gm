@@ -176,6 +176,11 @@ function gm.examples.trainMRF()
    print(nodeBel[{ {},2 }])
    print('<gm.testme> edge beliefs (prob that node1=2 & node2=2)')
    print(edgeBel[{ {},2,2 }])
+
+   -- sample from model:
+   local samples = g:sample('exact',5)
+   print('<gm.testme> 5 samples from model:')
+   print(samples)
 end
 
 ----------------------------------------------------------------------

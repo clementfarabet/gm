@@ -46,6 +46,7 @@ require 'libgm'
 require 'gm.decode'
 require 'gm.infer'
 require 'gm.energies'
+require 'gm.sample'
 require 'gm.examples'
 require 'gm.adjacency'
 
@@ -264,6 +265,29 @@ function gm.graph(...)
          print('<gm.infer.'..method..'> performed inference on graph in ' .. t.real .. 'sec')
       end
       return nodeBel,edgeBel,logZ
+   end
+
+   graph.sample = function(g,method,n)
+      if not method or not gm.sample[method] then
+         local availmethods = {}
+         for k in pairs(gm.sample) do
+            table.insert(availmethods,k)
+         end
+         availmethods = table.concat(availmethods, ' | ')
+         print(xlua.usage('sample',
+               'sample from model', nil,
+               {type='string', help='sampling method: ' .. availmethods, req=true},
+               {type='number', help='nb of samples', default=1}))
+         xlua.error('missing/incorrect method','infer')
+      end
+      graph.timer:reset()
+      local samples = gm.sample[method](g, n or 1)
+      local t = graph.timer:time()
+      if g.verbose then
+         print('<gm.sample.'..method..'> performed sampling from graph in ' .. t.real .. 'sec')
+      end
+      if not n then return samples[1] end
+      return samples
    end
 
    graph.initParameters = function(g,nodeMap,edgeMap)

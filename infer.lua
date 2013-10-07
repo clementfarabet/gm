@@ -56,7 +56,7 @@ function gm.infer.exact(graph)
 
    -- verbose
    if graph.verbose then
-      print('<gm.infer.bp> doing exact inference')
+      print('<gm.infer.exact> doing exact inference')
    end
 
    -- local vars
