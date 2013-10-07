@@ -14,14 +14,15 @@ joint probability;
 well as the probabilities of each variable taking each possible state (the
 marginal probabilities);
 
+* Sampling: given a model, sampling generates likely configurations for 
+each node of the graph;
+
 * Training (or parameter estimation): the task of computing the potentials 
 that maximize the likelihood of a set of data (MAP estimation).
 
 Note 1: parameter estimation is implemented for CRF and MRF objectives.
 
-Note 2: sampling is not implemented yet.
-
-Note 3: this code is heavily based on 
+Note 2: this code is heavily based on 
 [UGM](http://www.di.ens.fr/~mschmidt/Software/UGM.html), 
 from Mark Schmidt.
 
