@@ -411,3 +411,6 @@ function gm.graph(...)
    -- return result
    return graph
 end
+
+-- Return package
+return gm
