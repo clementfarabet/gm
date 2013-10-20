@@ -192,7 +192,7 @@ end
 --
 function gm.examples.trainCRF()
    -- make training data
-   sample = torch.load(paths.concat(paths.install_lua_path, 'gm', 'X.t7'))
+   sample = torch.load(paths.concat(sys.fpath(), 'X.t7'))
    nRows,nCols = sample:size(1),sample:size(2)
    nNodes = nRows*nCols
    nStates = 2
