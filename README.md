@@ -40,7 +40,7 @@ $ [sudo] luarocks install gm
 First run torch, and load gm:
 
 ``` sh
-$ torch
+$ th
 ``` 
 
 ``` lua
