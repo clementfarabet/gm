@@ -32,7 +32,7 @@ from Mark Schmidt.
 ## Install 
 
 ``` sh
-$ [sudo] torch-rocks install gm
+$ [sudo] luarocks install gm
 ```
 
 ## Use
