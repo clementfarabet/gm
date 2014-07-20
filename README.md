@@ -1,3 +1,6 @@
+(Note: this package is provided for compatibility/public tutorials.
+ It is not maintained anymore)
+
 # GM: Graphical Models for Torch/LuaJIT
 
 This package provides standard functions to create (arbitrary) 
